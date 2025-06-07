@@ -1,0 +1,260 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CME Anatomy Viewer{% block title %}{% endblock %}</title> <!-- First definition of block 'title' -->
+    
+    <!-- Modern CSS Framework -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        medical: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    },
+                    fontFamily: {
+                        'medical': ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <!-- Meta tags for SEO and social sharing -->
+    <meta name="description" content="Professional 3D anatomy viewer for medical education and clinical use">
+    <meta name="keywords" content="anatomy, 3D viewer, medical, healthcare, CME">
+    <meta name="author" content="CME Anatomy Viewer">
+    
+    <!-- Open Graph meta tags -->
+    <!-- Changed block name from 'title' to 'og_title' to avoid conflict -->
+    <meta property="og:title" content="CME Anatomy Viewer{% block og_title %}{% endblock %}"> 
+    <meta property="og:description" content="Professional 3D anatomy viewer for medical education">
+    <meta property="og:type" content="website">
+</head>
+<body class="font-medical bg-gradient-to-br from-gray-50 to-medical-50 min-h-screen antialiased">
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-medical-600 text-white px-4 py-2 rounded-lg z-50">
+        Skip to main content
+    </a>
+
+    <!-- Navigation -->
+    <nav class="bg-white/80 backdrop-blur-md shadow-lg border-b border-gray-200/50 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo and brand -->
+                <div class="flex items-center space-x-4">
+                    <a href="{{ url_for('main.index') }}" class="flex items-center space-x-3 group">
+                        <div class="w-10 h-10 bg-gradient-to-br from-medical-500 to-medical-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
+                            <i class="fas fa-brain text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-xl text-gray-900 group-hover:text-medical-600 transition-colors">CME</span>
+                            <div class="text-xs text-gray-500 font-medium">Anatomy Viewer</div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Navigation items -->
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="{{ url_for('main.index') }}" class="nav-link text-gray-600 hover:text-medical-600 font-medium transition-colors">
+                        <i class="fas fa-upload mr-2"></i>Upload
+                    </a>
+                    <a href="#" class="nav-link text-gray-600 hover:text-medical-600 font-medium transition-colors">
+                        <i class="fas fa-question-circle mr-2"></i>Help
+                    </a>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" class="text-gray-600 hover:text-medical-600 p-2 rounded-lg transition-colors">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <div class="px-4 py-3 space-y-2">
+                <a href="{{ url_for('main.index') }}" class="block px-4 py-2 text-gray-600 hover:text-medical-600 hover:bg-medical-50 rounded-lg transition-colors">
+                    <i class="fas fa-upload mr-2"></i>Upload
+                </a>
+                <a href="#" class="block px-4 py-2 text-gray-600 hover:text-medical-600 hover:bg-medical-50 rounded-lg transition-colors">
+                    <i class="fas fa-question-circle mr-2"></i>Help
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main id="main-content" class="flex-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer (only show on non-viewer pages) -->
+    {% if not request.endpoint or 'viewer' not in request.endpoint %}
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- About -->
+                <div>
+                    <h3 class="font-semibold text-gray-900 mb-3">About CME Anatomy Viewer</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        Professional 3D anatomy visualization tool designed for medical education and clinical applications.
+                    </p>
+                </div>
+                
+                <!-- Quick Links -->
+                <div>
+                    <h3 class="font-semibold text-gray-900 mb-3">Quick Links</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="{{ url_for('main.index') }}" class="text-gray-600 hover:text-medical-600 transition-colors">Upload Model</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-medical-600 transition-colors">Documentation</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-medical-600 transition-colors">Support</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Contact -->
+                <div>
+                    <h3 class="font-semibold text-gray-900 mb-3">Support</h3>
+                    <p class="text-gray-600 text-sm mb-2">Need help with your 3D models?</p>
+                    <a href="mailto:support@cmeanatomy.com" class="text-medical-600 hover:text-medical-700 text-sm font-medium transition-colors">
+                        support@cmeanatomy.com
+                    </a>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-200 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-500 text-sm">© 2024 CME Anatomy Viewer. All rights reserved.</p>
+                <div class="flex space-x-4 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-medical-500 transition-colors">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-medical-500 transition-colors">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-medical-500 transition-colors">
+                        <i class="fab fa-github"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    {% endif %}
+
+    <!-- Global JavaScript -->
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Add loading state to buttons
+        function addLoadingState(button, text = 'Loading...') {
+            const originalText = button.innerHTML;
+            button.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>${text}`;
+            button.disabled = true;
+            
+            return function() {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            };
+        }
+
+        // Global error handler
+        window.showError = function(message) {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+            toast.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-red-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        };
+
+        // Global success handler
+        window.showSuccess = function(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+            toast.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-check-circle"></i>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-green-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
+    </script>
+
+    <!-- Page-specific scripts -->
+    {% block scripts %}{% endblock %}
+    
+    <!-- Analytics (add your tracking code here) -->
+    {% if config.ANALYTICS_ID %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ config.ANALYTICS_ID }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ config.ANALYTICS_ID }}');
+    </script>
+    {% endif %}
+</body>
+</html>

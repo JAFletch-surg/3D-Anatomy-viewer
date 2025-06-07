@@ -1,0 +1,326 @@
+/* modelControls.css */
+
+.model-controls {
+    position: fixed;
+    top: 3.5rem;
+    right: 0.2rem;
+    width: 280px;
+    background-color: rgba(17, 24, 39, 0.95);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(75, 85, 99, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+}
+
+.model-controls-title {
+    color: rgba(243, 244, 246, 0.9);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.model-controls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background-color: rgba(31, 41, 55, 0.5);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.control-item:hover {
+    background-color: rgba(55, 65, 81, 0.5);
+}
+
+.control-item.hidden {
+    opacity: 0.5;
+}
+
+.control-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.color-indicator {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-item-name {
+    color: rgba(243, 244, 246, 0.9);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.visibility-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background-color: rgba(59, 130, 246, 0.2);
+    border-radius: 0.375rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.visibility-toggle:hover {
+    background-color: rgba(59, 130, 246, 0.3);
+}
+
+.control-item.hidden .visibility-toggle {
+    background-color: rgba(75, 85, 99, 0.2);
+}
+
+.control-item.hidden .visibility-toggle:hover {
+    background-color: rgba(75, 85, 99, 0.3);
+}
+
+.eye-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: rgba(243, 244, 246, 0.9);
+}
+
+.eye-icon .eye-closed {
+    display: none;
+}
+
+.control-item.hidden .eye-icon .eye-open {
+    display: none;
+}
+
+.control-item.hidden .eye-icon .eye-closed {
+    display: block;
+}
+
+/* Glassmorphism and modern effects */
+.backdrop-blur-md {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Custom scrollbar for controls */
+.model-controls::-webkit-scrollbar {
+    width: 6px;
+}
+
+.model-controls::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.model-controls::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.model-controls::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Improved tooltips */
+.tool-btn {
+    position: relative;
+}
+
+.tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.2s ease-in-out;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.tool-btn:hover .tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+}
+
+/* Custom range slider styles */
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Control item hover effects */
+.control-item {
+    transition: all 0.2s ease-in-out;
+}
+
+.control-item:hover {
+    transform: translateX(2px);
+}
+
+/* Mobile specific styles */
+@media (max-width: 768px) {
+    .toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .tool-btn {
+        padding: 12px;
+    }
+    
+    .model-info {
+        font-size: 12px;
+        padding: 12px;
+    }
+    
+    /* Hide tooltips on mobile */
+    .tooltip {
+        display: none;
+    }
+}
+
+/* Loading animation */
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Search input focus effect */
+#anatomy-search:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Button focus states for accessibility */
+button:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+}
+
+/* Custom checkbox for visibility toggles */
+.visibility-toggle.hidden-part {
+    opacity: 0.5;
+}
+
+.visibility-toggle:hover {
+    transform: scale(1.05);
+}
+
+/* Error and success states */
+.error-state {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.success-state {
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* Performance optimizations */
+.model-controls,
+.toolbar,
+.model-info {
+    will-change: transform;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .bg-white\/95 {
+        background-color: rgba(17, 24, 39, 0.95);
+    }
+    
+    .text-gray-800 {
+        color: rgb(229, 231, 235);
+    }
+    
+    .bg-gray-100 {
+        background-color: rgb(55, 65, 81);
+    }
+}
