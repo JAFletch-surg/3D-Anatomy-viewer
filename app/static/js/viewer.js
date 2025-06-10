@@ -49,10 +49,10 @@ document.addEventListener('DOMContentLoaded', function() {
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             
-            // MEDICAL RENDERER SETTINGS - Clean color reproduction
+            
             renderer.outputEncoding = THREE.sRGBEncoding;
-            renderer.toneMapping = THREE.LinearToneMapping; // No color distortion
-            renderer.toneMappingExposure = 1.0; // No exposure adjustment
+            renderer.toneMapping = THREE.LinearToneMapping; 
+            renderer.toneMappingExposure = 1.0; 
 
             // OrbitControls setup
             controls = new THREE.OrbitControls(camera, renderer.domElement);

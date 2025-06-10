@@ -30,10 +30,7 @@ def analyze_nifti(filepath):
     return nii
 
 def extract_transformed_mesh(filepath):
-    """
-    Extract meshes with correct label naming and decimation
-    Now uses proper affine transformations while maintaining original interface
-    """
+    
     try:
         # Load and analyze data
         nii = analyze_nifti(filepath)
@@ -90,7 +87,7 @@ def extract_transformed_mesh(filepath):
             
             logger.info(f"Initial bounds for label_{label}: {mesh.bounds}")
             
-            # Flip normals to ensure they are facing outward
+            # Flip normals 
             mesh.invert()
             logger.info(f"Normals flipped to face outward for label_{label}")
             

@@ -24,7 +24,7 @@ def process_segmentation(filepath):
     try:
         logger.info(f"Starting segmentation processing for file: {filepath}")
         
-        # Validate input file
+        # validate input
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Input file not found: {filepath}")
         
@@ -56,4 +56,3 @@ def process_segmentation(filepath):
         except Exception as e:
             logger.warning(f"Failed to cleanup temporary files: {str(e)}")
 
-# You already have the test_mesh.py content from earlier - copy it directly to app/test_mesh.py
