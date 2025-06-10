@@ -104,13 +104,13 @@ def extract_transformed_mesh(filepath):
             
             if label in [1, 6]:
                 target_percent = 0.7
-                logger.info(f"Label {label}: Decimating to 80% of original faces.")
+                logger.info(f"Label {label}: Decimating to 70% of original faces.")
             elif label == 2:
                 target_percent = 0.7
-                logger.info(f"Label {label}: Decimating to 80% of original faces.")
+                logger.info(f"Label {label}: Decimating to 70% of original faces.")
             else:
                 target_percent = 0.2
-                logger.info(f"Label {label}: Decimating to 10% of original faces.")
+                logger.info(f"Label {label}: Decimating to 20% of original faces.")
             
             target_faces = int(len(mesh.faces) * target_percent)
                 
@@ -161,7 +161,7 @@ def extract_transformed_mesh(filepath):
         
         logger.info(f"\nApplying scaling with factor: {scale}")
         
-        # Add scaled meshes to scene
+        # Add mesh to scene with final transformations
         for mesh, label in processed_meshes:
             # Center and scale the mesh (original method)
             mesh.vertices = (mesh.vertices - scene_centroid) * scale
@@ -171,7 +171,7 @@ def extract_transformed_mesh(filepath):
             logger.info(f"Added scaled mesh as label_{label}")
             logger.info(f"Mesh bounds: {mesh.bounds}")
         
-        # Export using original naming convention
+        
         output_path = os.path.join(
             os.path.dirname(filepath),
             f"{os.path.splitext(os.path.basename(filepath))[0].replace('.nii', '')}.glb"

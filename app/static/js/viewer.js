@@ -85,10 +85,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupLights() {
-        // Remove any existing lights
+        
         scene.children = scene.children.filter(child => !(child instanceof THREE.Light));
 
-        // MEDICAL LIGHTING SETUP - Clean, even illumination
+        
         setupMedicalLighting();
     }
 
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
         keyLight.position.set(10, 12, 8);
         keyLight.castShadow = true;
         
-        // Configure shadows for clean edges
+        
         keyLight.shadow.mapSize.width = 4048;
         keyLight.shadow.mapSize.height = 4048;
         keyLight.shadow.camera.near = 0.5;
@@ -231,20 +231,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const materialColor = getMaterialColor(node.name);
                 node.material = new THREE.MeshStandardMaterial({
                     color: materialColor,
-                    roughness: 0.2,        // Slightly glossy for clean appearance
-                    metalness: 0.0,         // Non-metallic (biological tissue)
-                    transparent: true,      // Always enable transparency
+                    roughness: 0.2,        
+                    metalness: 0.0,         
+                    transparent: true,      
                     opacity: 1.0,
                     side: THREE.DoubleSide,
                     flatShading: false,
-                    alphaTest: 0.001,       // Small alpha test to improve performance
-                    depthWrite: true,       // Keep depth writing for proper rendering
+                    alphaTest: 0.001,       
+                    depthWrite: true,      
                     
-                    // Subtle self-illumination for medical visibility
+                    
                     emissive: materialColor.clone().multiplyScalar(0.08),
                     emissiveIntensity: 0.0,
                     
-                    // No environment reflections for clean look
+                    // No environment reflections 
                     envMapIntensity: 0.0
                 });
 
@@ -279,34 +279,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getMaterialColor(nodeName) {
-        // MEDICAL COLORS - keeping original color scheme
+        // Map node names to specific colors 
         const colorMap = {
             'label_1': new THREE.Color(0xCB0404), // Artery - Crimson Red
-            'label_2': new THREE.Color(0x0065F8), // Vein - Royal Blue  
-            'label_3': new THREE.Color(0xF14C4C), // Duodenum - Deep Pink
-            'label_4': new THREE.Color(0xff29ca3), // Colon - Peru
-            'label_5': new THREE.Color(0xFFB22C), // Pancreas - Peach
-            'label_6': new THREE.Color(0x38E54D)  // Tumor - Lime Green
+            'label_2': new THREE.Color(0x0065F8), // Vein - Blue 
+            'label_3': new THREE.Color(0xF14C4C), // Duodenum - Pink
+            'label_4': new THREE.Color(0xff29ca3), // Colon - Beige
+            'label_5': new THREE.Color(0xFFB22C), // Pancreas - Yellow
+            'label_6': new THREE.Color(0x38E54D)  // Tumor - Green
         };
 
         return colorMap[nodeName] || new THREE.Color(0.8, 0.8, 0.8); // Default light gray
     }
 
     function centerAndScaleModel(model) {
-        // Calculate bounding box
+        
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
 
-        // Center the model
+        
         model.position.sub(center);
 
-        // Scale the model to fit in viewport
+        
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 1.5 / maxDim; // Make it slightly smaller than viewport
+        const scale = 1.5 / maxDim; 
         model.scale.multiplyScalar(scale);
 
-        // Update original camera position based on model size
+        
         const distance = maxDim * 0.8;
         originalCameraPosition.set(distance, distance, distance);
         originalCameraTarget.set(0, 0, 0);
@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupOpacitySliders() {
-        // FIXED: Proper event listener setup for opacity sliders
+        
         console.log('Setting up opacity sliders...');
         
         document.querySelectorAll('.slider').forEach((slider, index) => {
@@ -564,13 +564,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (node && node.material) {
             console.log(`Found node for ${label}, setting opacity...`);
-            // FIXED: Proper opacity handling
+            // Clamp opacity to avoid zero or negative values
             const clampedOpacity = Math.max(0.01, Math.min(1.0, opacity)); // Clamp between 0.01 and 1.0
             node.material.opacity = clampedOpacity;
             node.material.transparent = clampedOpacity < 1.0;
             node.material.needsUpdate = true;
             
-            // Handle depth sorting for transparent objects
+            // depth sorting
             if (clampedOpacity < 1.0) {
                 node.material.depthWrite = false;
                 node.renderOrder = 1000 + Math.round((1 - clampedOpacity) * 100); // Higher values render later
@@ -590,7 +590,6 @@ document.addEventListener('DOMContentLoaded', function() {
             node.visible = true;
         });
         
-        // Update UI
         document.querySelectorAll('.visibility-toggle, .visibility-toggle-mobile').forEach(btn => {
             btn.classList.remove('hidden-part');
             const useElement = btn.querySelector('use');
@@ -668,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function takeScreenshot() {
         if (renderer) {
             try {
-                // Ensure we're rendering the current frame
+                
                 renderer.render(scene, camera);
                 
                 // Create download link
@@ -772,13 +771,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showToast(message, type = 'success') {
-        // Use global notification system if available
+        
         if (type === 'success' && window.showSuccess) {
             window.showSuccess(message);
         } else if (type === 'error' && window.showError) {
             window.showError(message);
         } else {
-            // Fallback toast implementation
+            
             const toast = document.createElement('div');
             toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg z-50 transition-opacity text-white ${
                 type === 'error' ? 'bg-red-500' : 'bg-green-500'
@@ -859,7 +858,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ===== CLEANUP =====
 
     // Cleanup function for memory management
     window.addEventListener('beforeunload', function() {

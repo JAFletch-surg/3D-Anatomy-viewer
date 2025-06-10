@@ -6,7 +6,7 @@ import threading
 
 main = Blueprint('main', __name__)
 
-# Track processing status
+
 processing_status = {}
 
 def allowed_file(filename):
@@ -30,14 +30,13 @@ def upload_file():
         filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Initialize processing status
+        
         processing_status[filename] = {
             'status': 'processing',
             'progress': 0,
             'output_file': None
         }
         
-        # Start processing in background
         thread = threading.Thread(target=process_model, args=(filepath, filename))
         thread.start()
         
@@ -122,7 +121,7 @@ def check_upload_folder():
     files = os.listdir(folder) if os.path.exists(folder) else []
     return f"Upload folder: {folder}<br>Files: {files}"
 
-# Health check route for Cloud Run
+
 @main.route('/health')
 def health_check():
     return {'status': 'healthy'}, 200

@@ -45,13 +45,11 @@
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     
-    <!-- Meta tags for SEO and social sharing -->
     <meta name="description" content="Professional 3D anatomy viewer for medical education and clinical use">
     <meta name="keywords" content="anatomy, 3D viewer, medical, healthcare, CME">
     <meta name="author" content="CME Anatomy Viewer">
     
-    <!-- Open Graph meta tags -->
-    <!-- Changed block name from 'title' to 'og_title' to avoid conflict -->
+    
     <meta property="og:title" content="CME Anatomy Viewer{% block og_title %}{% endblock %}"> 
     <meta property="og:description" content="Professional 3D anatomy viewer for medical education">
     <meta property="og:type" content="website">
@@ -167,7 +165,7 @@
     </footer>
     {% endif %}
 
-    <!-- Global JavaScript -->
+    
     <script>
         // Mobile menu toggle
         document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
@@ -187,9 +185,9 @@
             };
         }
 
-        // Global error handler
+        
         window.showError = function(message) {
-            // Create toast notification
+            
             const toast = document.createElement('div');
             toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
             toast.innerHTML = `
@@ -204,19 +202,19 @@
             
             document.body.appendChild(toast);
             
-            // Animate in
+            
             setTimeout(() => {
                 toast.classList.remove('translate-x-full');
             }, 100);
             
-            // Auto remove after 5 seconds
+            
             setTimeout(() => {
                 toast.classList.add('translate-x-full');
                 setTimeout(() => toast.remove(), 300);
             }, 5000);
         };
 
-        // Global success handler
+        
         window.showSuccess = function(message) {
             const toast = document.createElement('div');
             toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
@@ -246,7 +244,7 @@
     <!-- Page-specific scripts -->
     {% block scripts %}{% endblock %}
     
-    <!-- Analytics (add your tracking code here) -->
+    
     {% if config.ANALYTICS_ID %}
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ config.ANALYTICS_ID }}"></script>
     <script>

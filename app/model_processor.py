@@ -8,19 +8,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def process_segmentation(filepath):
-    """
-    Wrapper for the segmentation processing function that adds additional error handling
-    and logging.
-    
-    Args:
-        filepath (str): Path to the input NIfTI file
-        
-    Returns:
-        str: Path to the processed GLB file
-        
-    Raises:
-        Exception: If processing fails, with detailed error message
-    """
+   
     try:
         logger.info(f"Starting segmentation processing for file: {filepath}")
         
