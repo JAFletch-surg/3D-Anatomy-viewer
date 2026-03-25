@@ -8,7 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    libgl1-mesa-dri \
+    libgl1 \
     libglib2.0-0 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
@@ -31,7 +31,6 @@ EXPOSE 8080
 # Set environment variables
 ENV FLASK_APP=run.py
 ENV PYTHONPATH=/app
-ENV SECRET_KEY=production-secret-key-change-this
 ENV PORT=8080
 
 # Command to run the application
