@@ -9,150 +9,218 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html {
-            overflow: hidden;
-            background: #000;
-            font-family: 'Inter', system-ui, sans-serif;
-        }
-        .glass {
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 240, 212, 0.08);
-        }
-        #niivue-canvas {
-            position: fixed;
-            top: 48px; left: 0;
-            width: 100vw;
-            height: calc(100vh - 48px);
-        }
+        body, html { overflow: hidden; background: #000; font-family: 'Inter', system-ui, sans-serif; }
+        .glass { background: rgba(0,0,0,0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,240,212,0.08); }
+        #niivue-canvas { position: fixed; top: 48px; left: 0; width: 100vw; height: calc(100vh - 48px); }
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* Windowing slider styles */
-        .window-slider {
-            -webkit-appearance: none; appearance: none;
-            width: 100%; height: 4px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 2px; outline: none;
-        }
-        .window-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 14px; height: 14px;
-            border-radius: 50%; background: #00f0d4; cursor: pointer;
-            border: 2px solid #000;
-            box-shadow: 0 0 8px rgba(0,240,212,0.4);
-        }
-        .window-slider::-moz-range-thumb {
-            width: 14px; height: 14px; border-radius: 50%;
-            background: #00f0d4; cursor: pointer;
-            border: 2px solid #000;
-            box-shadow: 0 0 8px rgba(0,240,212,0.4);
-        }
+        .ct-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; outline: none; }
+        .ct-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #00f0d4; cursor: pointer; border: 2px solid #000; box-shadow: 0 0 8px rgba(0,240,212,0.4); }
+        .ct-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #00f0d4; cursor: pointer; border: 2px solid #000; box-shadow: 0 0 8px rgba(0,240,212,0.4); }
 
         .view-btn { transition: all 0.15s; }
-        .view-btn.active {
-            background: rgba(0, 240, 212, 0.15);
-            color: #00f0d4;
-        }
-        .preset-btn {
-            transition: all 0.15s;
-        }
-        .preset-btn.active {
-            background: rgba(0, 240, 212, 0.15);
-            color: #00f0d4;
-            border-color: rgba(0, 240, 212, 0.3);
+        .view-btn.active { background: rgba(0,240,212,0.15); color: #00f0d4; }
+        .preset-btn { transition: all 0.15s; }
+        .preset-btn.active { background: rgba(0,240,212,0.15); color: #00f0d4; border-color: rgba(0,240,212,0.3); }
+
+        .panel-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .panel-content.open { max-height: 600px; }
+
+        .seg-item { background: rgba(255,255,255,0.02); border-radius: 8px; transition: all 0.2s; }
+        .seg-item:hover { background: rgba(0,240,212,0.05); }
+
+        .seg-slider { -webkit-appearance: none; appearance: none; width: 50px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; outline: none; }
+        .seg-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: #00f0d4; cursor: pointer; border: 1.5px solid #000; }
+        .seg-slider::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: #00f0d4; cursor: pointer; border: 1.5px solid #000; }
+
+        /* Mobile: view buttons scroll horizontally */
+        @media (max-width: 768px) {
+            .view-buttons { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .right-panels { right: 0.5rem !important; left: 0.5rem !important; width: auto !important; }
         }
     </style>
 </head>
 <body>
     <!-- Nav Bar -->
     <div class="fixed top-0 left-0 right-0 glass z-50">
-        <div class="flex items-center justify-between p-3 px-5">
-            <a href="javascript:history.back()" class="flex items-center space-x-2 text-gray-500 hover:text-[#00f0d4] transition-colors text-sm">
+        <div class="flex items-center justify-between p-3 px-4">
+            <a href="javascript:history.back()" class="flex items-center space-x-2 text-gray-500 hover:text-[#00f0d4] transition-colors text-sm shrink-0">
                 <i class="fas fa-arrow-left text-xs"></i>
-                <span class="font-medium">Back</span>
+                <span class="font-medium hidden sm:inline">Back</span>
             </a>
-            <div class="bg-white/5 rounded-lg px-3 py-1.5 border border-white/5">
-                <span class="text-gray-400 text-sm font-medium">CT Scan Viewer</span>
+            <div class="view-buttons flex items-center gap-1 mx-3">
+                <button onclick="setView('axial')" id="btn-axial" class="view-btn px-2.5 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg whitespace-nowrap">Axial</button>
+                <button onclick="setView('coronal')" id="btn-coronal" class="view-btn px-2.5 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg whitespace-nowrap">Coronal</button>
+                <button onclick="setView('sagittal')" id="btn-sagittal" class="view-btn px-2.5 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg whitespace-nowrap">Sagittal</button>
+                <button onclick="setView('multi')" id="btn-multi" class="view-btn active px-2.5 py-1 text-xs rounded-lg font-medium whitespace-nowrap">Multi</button>
+                <button onclick="setView('render')" id="btn-render" class="view-btn px-2.5 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg whitespace-nowrap">3D</button>
             </div>
-            <!-- View mode buttons -->
-            <div class="flex items-center gap-1">
-                <button onclick="setView('axial')" id="btn-axial" class="view-btn px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg">Axial</button>
-                <button onclick="setView('coronal')" id="btn-coronal" class="view-btn px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg">Coronal</button>
-                <button onclick="setView('sagittal')" id="btn-sagittal" class="view-btn px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg">Sagittal</button>
-                <button onclick="setView('multi')" id="btn-multi" class="view-btn active px-3 py-1 text-xs rounded-lg font-medium">Multi</button>
-                <button onclick="setView('render')" id="btn-render" class="view-btn px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] rounded-lg">3D</button>
+            <div class="shrink-0">
+                <button id="toggle-panels" onclick="togglePanels()" class="text-gray-500 hover:text-[#00f0d4] transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                    <i class="fas fa-sliders-h text-sm"></i>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- NiiVue Canvas -->
+    <!-- Canvas -->
     <canvas id="niivue-canvas"></canvas>
 
-    <!-- Windowing Controls Panel -->
-    <div class="fixed top-16 right-5 glass rounded-2xl z-40" style="width: 260px;">
-        <div class="p-5">
-            <h3 class="text-[#00f0d4] font-semibold text-xs tracking-widest uppercase mb-4">
-                <i class="fas fa-adjust mr-1"></i> Window
-            </h3>
+    <!-- Right Side Panels -->
+    <div id="panels-container" class="fixed top-14 right-4 z-40 space-y-2 right-panels" style="width: 260px;">
 
-            <!-- Presets -->
-            <div class="mb-4">
-                <label class="text-gray-500 text-xs mb-2 block">Presets</label>
-                <div class="grid grid-cols-3 gap-1.5">
-                    <button onclick="setPreset('abdomen')" id="preset-abdomen" class="preset-btn active px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5 hover:border-[#00f0d4]/20">Abdomen</button>
-                    <button onclick="setPreset('lung')" id="preset-lung" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5 hover:border-[#00f0d4]/20">Lung</button>
-                    <button onclick="setPreset('bone')" id="preset-bone" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5 hover:border-[#00f0d4]/20">Bone</button>
-                    <button onclick="setPreset('brain')" id="preset-brain" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5 hover:border-[#00f0d4]/20">Brain</button>
-                    <button onclick="setPreset('liver')" id="preset-liver" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5 hover:border-[#00f0d4]/20">Liver</button>
-                    <button onclick="setPreset('vascular')" id="preset-vascular" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5 hover:border-[#00f0d4]/20">Vascular</button>
+        <!-- Windowing Panel (collapsible) -->
+        <div class="glass rounded-2xl">
+            <button onclick="togglePanel('window')" class="w-full flex items-center justify-between p-4 text-left">
+                <h3 class="text-[#00f0d4] font-semibold text-xs tracking-widest uppercase">
+                    <i class="fas fa-adjust mr-1.5"></i>Window
+                </h3>
+                <i id="window-chevron" class="fas fa-chevron-down text-gray-600 text-xs transition-transform"></i>
+            </button>
+            <div id="window-panel" class="panel-content px-4 pb-4">
+                <!-- Presets -->
+                <div class="mb-3">
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button onclick="setPreset('abdomen')" id="preset-abdomen" class="preset-btn active px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5">Abdomen</button>
+                        <button onclick="setPreset('lung')" id="preset-lung" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5">Lung</button>
+                        <button onclick="setPreset('bone')" id="preset-bone" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5">Bone</button>
+                        <button onclick="setPreset('brain')" id="preset-brain" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5">Brain</button>
+                        <button onclick="setPreset('liver')" id="preset-liver" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5">Liver</button>
+                        <button onclick="setPreset('vascular')" id="preset-vascular" class="preset-btn px-2 py-1.5 text-xs text-gray-400 bg-white/5 rounded-lg border border-white/5">Vascular</button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Window Width -->
-            <div class="mb-3">
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="text-gray-500 text-xs">Width (WW)</label>
-                    <span id="ww-value" class="text-[#00f0d4] text-xs font-mono">400</span>
+                <!-- WW -->
+                <div class="mb-2">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-gray-500 text-xs">WW</label>
+                        <span id="ww-value" class="text-[#00f0d4] text-xs font-mono">400</span>
+                    </div>
+                    <input type="range" id="ww-slider" class="ct-slider" min="1" max="4000" value="400">
                 </div>
-                <input type="range" id="ww-slider" class="window-slider" min="1" max="4000" value="400">
-            </div>
-
-            <!-- Window Level -->
-            <div class="mb-4">
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="text-gray-500 text-xs">Level (WL)</label>
-                    <span id="wl-value" class="text-[#00f0d4] text-xs font-mono">40</span>
+                <!-- WL -->
+                <div class="mb-2">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-gray-500 text-xs">WL</label>
+                        <span id="wl-value" class="text-[#00f0d4] text-xs font-mono">40</span>
+                    </div>
+                    <input type="range" id="wl-slider" class="ct-slider" min="-1000" max="3000" value="40">
                 </div>
-                <input type="range" id="wl-slider" class="window-slider" min="-1000" max="3000" value="40">
-            </div>
-
-            <!-- Colormap -->
-            <div class="mb-3">
-                <label class="text-gray-500 text-xs mb-1.5 block">Colormap</label>
-                <div class="grid grid-cols-4 gap-1">
-                    <button onclick="setColormap('gray')" class="cmap-btn px-2 py-1 text-xs text-gray-300 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Gray</button>
-                    <button onclick="setColormap('hot')" class="cmap-btn px-2 py-1 text-xs text-gray-400 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Hot</button>
-                    <button onclick="setColormap('cool')" class="cmap-btn px-2 py-1 text-xs text-gray-400 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Cool</button>
-                    <button onclick="setColormap('bone')" class="cmap-btn px-2 py-1 text-xs text-gray-400 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Bone</button>
+                <!-- Colormap -->
+                <div class="mb-2">
+                    <div class="grid grid-cols-4 gap-1">
+                        <button onclick="setColormap('gray')" class="px-2 py-1 text-xs text-gray-300 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Gray</button>
+                        <button onclick="setColormap('hot')" class="px-2 py-1 text-xs text-gray-400 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Hot</button>
+                        <button onclick="setColormap('cool')" class="px-2 py-1 text-xs text-gray-400 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Cool</button>
+                        <button onclick="setColormap('bone')" class="px-2 py-1 text-xs text-gray-400 bg-white/5 rounded border border-white/5 hover:border-[#00f0d4]/20">Bone</button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Opacity (for 3D render mode) -->
-            <div id="opacity-section" class="hidden">
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="text-gray-500 text-xs">3D Opacity</label>
-                    <span id="opacity-value" class="text-[#00f0d4] text-xs font-mono">1.0</span>
+                <!-- Crosshair -->
+                <div class="flex items-center justify-between pt-2 border-t border-white/5">
+                    <span class="text-gray-500 text-xs">Crosshair</span>
+                    <button id="crosshair-toggle" onclick="toggleCrosshair()" class="px-2.5 py-0.5 text-xs text-[#00f0d4] bg-[#00f0d4]/10 rounded-lg">On</button>
                 </div>
-                <input type="range" id="opacity-slider" class="window-slider" min="0" max="100" value="100">
-            </div>
-
-            <!-- Crosshair toggle -->
-            <div class="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-                <span class="text-gray-500 text-xs">Crosshair</span>
-                <button id="crosshair-toggle" onclick="toggleCrosshair()" class="px-3 py-1 text-xs text-[#00f0d4] bg-[#00f0d4]/10 rounded-lg hover:bg-[#00f0d4]/20 transition-all">On</button>
             </div>
         </div>
+
+        <!-- Segmentation Overlay Panel (collapsible) -->
+        {% if seg_filename %}
+        <div class="glass rounded-2xl">
+            <button onclick="togglePanel('seg')" class="w-full flex items-center justify-between p-4 text-left">
+                <h3 class="text-[#00f0d4] font-semibold text-xs tracking-widest uppercase">
+                    <i class="fas fa-layer-group mr-1.5"></i>Segmentation
+                </h3>
+                <i id="seg-chevron" class="fas fa-chevron-down text-gray-600 text-xs transition-transform"></i>
+            </button>
+            <div id="seg-panel" class="panel-content px-4 pb-4">
+                <div class="space-y-1" id="seg-controls">
+                    <!-- Artery -->
+                    <div class="seg-item flex items-center justify-between py-1.5 px-2.5" data-seg-label="5">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-2.5 h-2.5 rounded-full" style="background:#DC143C; box-shadow:0 0 6px #DC143C66;"></div>
+                            <span class="text-gray-300 text-xs font-medium">Artery</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="range" min="0" max="100" value="70" class="seg-slider" data-seg="5">
+                            <button class="seg-toggle p-0.5 rounded hover:bg-white/5" data-seg="5">
+                                <i class="fas fa-eye text-gray-500 text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Vein -->
+                    <div class="seg-item flex items-center justify-between py-1.5 px-2.5" data-seg-label="6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-2.5 h-2.5 rounded-full" style="background:#4169E1; box-shadow:0 0 6px #4169E166;"></div>
+                            <span class="text-gray-300 text-xs font-medium">Vein</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="range" min="0" max="100" value="70" class="seg-slider" data-seg="6">
+                            <button class="seg-toggle p-0.5 rounded hover:bg-white/5" data-seg="6">
+                                <i class="fas fa-eye text-gray-500 text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Stomach -->
+                    <div class="seg-item flex items-center justify-between py-1.5 px-2.5" data-seg-label="10">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-2.5 h-2.5 rounded-full" style="background:#FF1493; box-shadow:0 0 6px #FF149366;"></div>
+                            <span class="text-gray-300 text-xs font-medium">Stomach</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="range" min="0" max="100" value="70" class="seg-slider" data-seg="10">
+                            <button class="seg-toggle p-0.5 rounded hover:bg-white/5" data-seg="10">
+                                <i class="fas fa-eye text-gray-500 text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Colon -->
+                    <div class="seg-item flex items-center justify-between py-1.5 px-2.5" data-seg-label="50">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-2.5 h-2.5 rounded-full" style="background:#CD853F; box-shadow:0 0 6px #CD853F66;"></div>
+                            <span class="text-gray-300 text-xs font-medium">Colon</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="range" min="0" max="100" value="70" class="seg-slider" data-seg="50">
+                            <button class="seg-toggle p-0.5 rounded hover:bg-white/5" data-seg="50">
+                                <i class="fas fa-eye text-gray-500 text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Pancreas -->
+                    <div class="seg-item flex items-center justify-between py-1.5 px-2.5" data-seg-label="61">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-2.5 h-2.5 rounded-full" style="background:#FFB347; box-shadow:0 0 6px #FFB34766;"></div>
+                            <span class="text-gray-300 text-xs font-medium">Pancreas</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="range" min="0" max="100" value="70" class="seg-slider" data-seg="61">
+                            <button class="seg-toggle p-0.5 rounded hover:bg-white/5" data-seg="61">
+                                <i class="fas fa-eye text-gray-500 text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Tumor -->
+                    <div class="seg-item flex items-center justify-between py-1.5 px-2.5" data-seg-label="111">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-2.5 h-2.5 rounded-full" style="background:#32CD32; box-shadow:0 0 6px #32CD3266;"></div>
+                            <span class="text-gray-300 text-xs font-medium">Tumor</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="range" min="0" max="100" value="70" class="seg-slider" data-seg="111">
+                            <button class="seg-toggle p-0.5 rounded hover:bg-white/5" data-seg="111">
+                                <i class="fas fa-eye text-gray-500 text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Show/Hide all -->
+                <div class="mt-3 pt-2 border-t border-white/5 flex gap-2">
+                    <button onclick="toggleAllSeg(true)" class="flex-1 py-1.5 text-xs text-[#00f0d4] bg-[#00f0d4]/10 rounded-lg hover:bg-[#00f0d4]/20">Show All</button>
+                    <button onclick="toggleAllSeg(false)" class="flex-1 py-1.5 text-xs text-gray-500 bg-white/5 rounded-lg hover:bg-white/10">Hide All</button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Loading -->
@@ -164,7 +232,6 @@
         </div>
     </div>
 
-    <!-- NiiVue -->
     <script type="module">
         import { Niivue } from "https://esm.sh/@niivue/niivue@0.44.1";
 
@@ -178,7 +245,33 @@
         nv.attachToCanvas(document.getElementById("niivue-canvas"));
         window._nv = nv;
 
-        // Window presets (WW, WL)
+        // Segmentation label colours matching 3D viewer (R,G,B,A 0-255)
+        const segColors = {
+            5:   [220, 20,  60,  180], // Artery - Crimson
+            6:   [65,  105, 225, 180], // Vein - Royal Blue
+            10:  [255, 20,  147, 180], // Stomach - Deep Pink
+            50:  [205, 133, 63,  180], // Colon - Peru
+            61:  [255, 179, 71,  180], // Pancreas - Sandy
+            111: [50,  205, 50,  180], // Tumor - Lime Green
+        };
+
+        // Build a colormap LUT for the segmentation overlay
+        // NiiVue uses a 256-entry RGBA colormap; we map label values to colours
+        function buildSegColormap() {
+            const lut = new Uint8Array(256 * 4);
+            // Index 0 = transparent (background)
+            for (const [label, rgba] of Object.entries(segColors)) {
+                const idx = parseInt(label);
+                if (idx < 256) {
+                    lut[idx * 4]     = rgba[0];
+                    lut[idx * 4 + 1] = rgba[1];
+                    lut[idx * 4 + 2] = rgba[2];
+                    lut[idx * 4 + 3] = rgba[3];
+                }
+            }
+            return lut;
+        }
+
         const presets = {
             abdomen:  { ww: 400,  wl: 40 },
             lung:     { ww: 1500, wl: -600 },
@@ -189,30 +282,52 @@
         };
 
         const ctUrl = "/static/uploads/{{ ct_filename }}";
+        const segUrl = "{{ seg_filename }}";
 
-        nv.loadVolumes([{ url: ctUrl, colormap: "gray" }]).then(() => {
-            document.getElementById("loading-overlay").style.display = "none";
-            nv.setSliceType(nv.sliceTypeMultiplanar);
-            // Apply default abdomen window
+        // Load volumes
+        const volumes = [{ url: ctUrl, colormap: "gray" }];
+
+        nv.loadVolumes(volumes).then(() => {
             applyWindow(400, 40);
+            nv.setSliceType(nv.sliceTypeMultiplanar);
+
+            // Load segmentation overlay if available
+            if (segUrl) {
+                nv.loadVolumes([{ url: "/static/uploads/" + segUrl, opacity: 0.7, colormap: "actc" }]).then(() => {
+                    // Apply custom colormap to segmentation
+                    if (nv.volumes.length > 1) {
+                        const seg = nv.volumes[1];
+                        seg.cal_min = 0;
+                        seg.cal_max = 255;
+                        seg.colormapLabel = nv.colormapFromKey("actc");
+                        // Override with our custom LUT
+                        const lut = buildSegColormap();
+                        seg.setColormapLabel(lut);
+                        nv.updateGLVolume();
+                    }
+                    document.getElementById("loading-overlay").style.display = "none";
+                }).catch(err => {
+                    console.warn("Segmentation overlay failed:", err);
+                    document.getElementById("loading-overlay").style.display = "none";
+                });
+            } else {
+                document.getElementById("loading-overlay").style.display = "none";
+            }
         }).catch(err => {
             console.error("Failed to load CT:", err);
             document.getElementById("loading-overlay").innerHTML =
                 '<div class="glass rounded-2xl p-8 text-center">' +
                 '<div class="text-red-400 text-sm font-medium mb-2">Failed to load CT scan</div>' +
-                '<div class="text-gray-600 text-xs mb-4">' + (err.message || 'Unknown error') + '</div>' +
-                '<button onclick="location.reload()" class="px-4 py-2 bg-[#00f0d4]/10 text-[#00f0d4] rounded-lg text-sm">Retry</button>' +
-                '</div>';
+                '<div class="text-gray-600 text-xs mb-4">' + (err.message || '') + '</div>' +
+                '<button onclick="location.reload()" class="px-4 py-2 bg-[#00f0d4]/10 text-[#00f0d4] rounded-lg text-sm">Retry</button></div>';
         });
 
-        // Apply window width/level
+        // Windowing
         function applyWindow(ww, wl) {
-            const calMin = wl - ww / 2;
-            const calMax = wl + ww / 2;
-            nv.volumes[0].cal_min = calMin;
-            nv.volumes[0].cal_max = calMax;
+            if (!nv.volumes.length) return;
+            nv.volumes[0].cal_min = wl - ww / 2;
+            nv.volumes[0].cal_max = wl + ww / 2;
             nv.updateGLVolume();
-
             document.getElementById('ww-slider').value = ww;
             document.getElementById('wl-slider').value = wl;
             document.getElementById('ww-value').textContent = ww;
@@ -224,22 +339,19 @@
         window.setView = function(view) {
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + view)?.classList.add('active');
-
-            const opacitySection = document.getElementById('opacity-section');
-
             switch(view) {
-                case 'axial': nv.setSliceType(nv.sliceTypeAxial); opacitySection.classList.add('hidden'); break;
-                case 'coronal': nv.setSliceType(nv.sliceTypeCoronal); opacitySection.classList.add('hidden'); break;
-                case 'sagittal': nv.setSliceType(nv.sliceTypeSagittal); opacitySection.classList.add('hidden'); break;
-                case 'multi': nv.setSliceType(nv.sliceTypeMultiplanar); opacitySection.classList.add('hidden'); break;
-                case 'render': nv.setSliceType(nv.sliceTypeRender); opacitySection.classList.remove('hidden'); break;
+                case 'axial': nv.setSliceType(nv.sliceTypeAxial); break;
+                case 'coronal': nv.setSliceType(nv.sliceTypeCoronal); break;
+                case 'sagittal': nv.setSliceType(nv.sliceTypeSagittal); break;
+                case 'multi': nv.setSliceType(nv.sliceTypeMultiplanar); break;
+                case 'render': nv.setSliceType(nv.sliceTypeRender); break;
             }
         };
 
         // Presets
         window.setPreset = function(name) {
             const p = presets[name];
-            if (!p || !nv.volumes.length) return;
+            if (!p) return;
             applyWindow(p.ww, p.wl);
             document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('preset-' + name)?.classList.add('active');
@@ -261,29 +373,89 @@
             document.getElementById('crosshair-toggle').textContent = crosshairOn ? 'On' : 'Off';
         };
 
-        // Slider events
+        // Sliders
         document.getElementById('ww-slider').addEventListener('input', function() {
-            const ww = parseInt(this.value);
-            const wl = parseInt(document.getElementById('wl-slider').value);
-            document.getElementById('ww-value').textContent = ww;
-            if (nv.volumes.length) applyWindow(ww, wl);
+            applyWindow(parseInt(this.value), parseInt(document.getElementById('wl-slider').value));
         });
-
         document.getElementById('wl-slider').addEventListener('input', function() {
-            const wl = parseInt(this.value);
-            const ww = parseInt(document.getElementById('ww-slider').value);
-            document.getElementById('wl-value').textContent = wl;
-            if (nv.volumes.length) applyWindow(ww, wl);
+            applyWindow(parseInt(document.getElementById('ww-slider').value), parseInt(this.value));
         });
 
-        document.getElementById('opacity-slider').addEventListener('input', function() {
-            const opacity = parseFloat(this.value) / 100;
-            document.getElementById('opacity-value').textContent = opacity.toFixed(1);
-            if (nv.volumes.length) {
-                nv.volumes[0].opacity = opacity;
-                nv.updateGLVolume();
+        // Panel collapse
+        const panelState = { window: false, seg: true };
+        window.togglePanel = function(name) {
+            panelState[name] = !panelState[name];
+            const panel = document.getElementById(name + '-panel');
+            const chevron = document.getElementById(name + '-chevron');
+            if (panel) panel.classList.toggle('open', panelState[name]);
+            if (chevron) chevron.style.transform = panelState[name] ? 'rotate(180deg)' : '';
+        };
+
+        // Toggle all panels visibility
+        let panelsVisible = true;
+        window.togglePanels = function() {
+            panelsVisible = !panelsVisible;
+            document.getElementById('panels-container').style.display = panelsVisible ? '' : 'none';
+        };
+
+        // Segmentation overlay controls
+        const segVisible = {};
+        Object.keys(segColors).forEach(k => segVisible[k] = true);
+
+        // Toggle individual label visibility
+        window.toggleSegLabel = function(label) {
+            segVisible[label] = !segVisible[label];
+            updateSegOverlay();
+            // Update icon
+            const btn = document.querySelector(`.seg-toggle[data-seg="${label}"] i`);
+            if (btn) {
+                btn.className = segVisible[label] ? 'fas fa-eye text-gray-500 text-xs' : 'fas fa-eye-slash text-gray-600 text-xs';
             }
+        };
+
+        // Toggle all
+        window.toggleAllSeg = function(show) {
+            Object.keys(segColors).forEach(k => {
+                segVisible[k] = show;
+                const btn = document.querySelector(`.seg-toggle[data-seg="${k}"] i`);
+                if (btn) btn.className = show ? 'fas fa-eye text-gray-500 text-xs' : 'fas fa-eye-slash text-gray-600 text-xs';
+            });
+            updateSegOverlay();
+        };
+
+        function updateSegOverlay() {
+            if (nv.volumes.length < 2) return;
+            const seg = nv.volumes[1];
+            const lut = new Uint8Array(256 * 4);
+            for (const [label, rgba] of Object.entries(segColors)) {
+                const idx = parseInt(label);
+                if (idx < 256 && segVisible[label]) {
+                    const slider = document.querySelector(`.seg-slider[data-seg="${label}"]`);
+                    const alpha = slider ? Math.round(parseInt(slider.value) * 2.55) : rgba[3];
+                    lut[idx * 4]     = rgba[0];
+                    lut[idx * 4 + 1] = rgba[1];
+                    lut[idx * 4 + 2] = rgba[2];
+                    lut[idx * 4 + 3] = alpha;
+                }
+            }
+            seg.setColormapLabel(lut);
+            nv.updateGLVolume();
+        }
+
+        // Bind seg toggle buttons
+        document.querySelectorAll('.seg-toggle').forEach(btn => {
+            btn.addEventListener('click', () => toggleSegLabel(btn.dataset.seg));
         });
+
+        // Bind seg opacity sliders
+        document.querySelectorAll('.seg-slider').forEach(slider => {
+            slider.addEventListener('input', () => updateSegOverlay());
+        });
+
+        // Open seg panel by default if it exists
+        setTimeout(() => {
+            if (document.getElementById('seg-panel')) togglePanel('seg');
+        }, 100);
     </script>
 </body>
 </html>

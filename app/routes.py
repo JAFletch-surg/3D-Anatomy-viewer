@@ -233,7 +233,14 @@ def viewer(filename):
 
 @main.route('/ct-viewer/<filename>')
 def ct_viewer(filename):
-    return render_template('ct_viewer.html', ct_filename=filename)
+    # Find the case to get the segmentation file
+    seg_filename = ''
+    case_id_match = filename.replace('case_', '').split('_')[0] if filename.startswith('case_') else ''
+    if case_id_match:
+        case = db.get_case(case_id_match)
+        if case and case.get('nifti_filename'):
+            seg_filename = case['nifti_filename']
+    return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename)
 
 
 @main.route('/static/uploads/<filename>')
