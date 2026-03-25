@@ -88,8 +88,8 @@ def gcs_delete_blob(blob_path):
 
 def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minutes=60):
     """Generate a v4 signed URL for a GCS blob.
-    On Cloud Run, uses IAM signBlob API since compute credentials
-    don't have a private key for direct signing."""
+    On Cloud Run, compute credentials can't sign directly.
+    We use service_account_email + access_token for IAM-based signing."""
     import google.auth
     import google.auth.transport.requests
 
@@ -98,9 +98,7 @@ def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minute
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_path)
 
-    # Get the service account email for IAM-based signing
     credentials, project = google.auth.default()
-    sa_email = getattr(credentials, 'service_account_email', None)
 
     kwargs = {
         'version': 'v4',
@@ -110,15 +108,15 @@ def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minute
     if content_type and method == 'PUT':
         kwargs['content_type'] = content_type
 
-    # If running on Cloud Run (compute credentials), use IAM signing
-    if sa_email and 'compute' in sa_email:
-        from google.auth.transport import requests as auth_requests
+    # Cloud Run uses compute engine credentials which can't sign.
+    # Pass service_account_email + access_token to use IAM signBlob API.
+    sa_email = getattr(credentials, 'service_account_email', None)
+    if sa_email:
+        # Ensure we have a fresh token
+        auth_request = google.auth.transport.requests.Request()
+        credentials.refresh(auth_request)
         kwargs['service_account_email'] = sa_email
         kwargs['access_token'] = credentials.token
-        # Refresh token if needed
-        if not credentials.token:
-            credentials.refresh(auth_requests.Request())
-            kwargs['access_token'] = credentials.token
 
     return blob.generate_signed_url(**kwargs)
 
