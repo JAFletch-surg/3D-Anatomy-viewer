@@ -243,23 +243,24 @@ def get_status(filename):
 
 @main.route('/viewer/<filename>')
 def viewer(filename):
-    # Try to find the case ID for thumbnail capture
     case_id = ''
+    case = None
     if filename.startswith('case_'):
         case_id = filename.replace('case_', '').split('_')[0]
-    return render_template('viewer.html', model_filename=filename, case_id=case_id)
+        case = db.get_case(case_id)
+    return render_template('viewer.html', model_filename=filename, case_id=case_id, case=case)
 
 
 @main.route('/ct-viewer/<filename>')
 def ct_viewer(filename):
-    # Find the case to get the segmentation file
     seg_filename = ''
-    case_id_match = filename.replace('case_', '').split('_')[0] if filename.startswith('case_') else ''
-    if case_id_match:
-        case = db.get_case(case_id_match)
+    case = None
+    if filename.startswith('case_'):
+        case_id = filename.replace('case_', '').split('_')[0]
+        case = db.get_case(case_id)
         if case and case.get('nifti_filename'):
             seg_filename = case['nifti_filename']
-    return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename)
+    return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename, case=case)
 
 
 @main.route('/static/uploads/<filename>')

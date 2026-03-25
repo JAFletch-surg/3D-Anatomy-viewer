@@ -57,13 +57,32 @@
     <!-- Nav Bar -->
     <div class="overlay top-0 left-0 right-0 glass">
         <div class="flex items-center justify-between p-2.5 px-4">
-            <a href="{{ url_for('main.index') }}" class="flex items-center space-x-2 text-gray-500 hover:text-[#00f0d4] transition-colors text-sm pointer-events-auto">
+            <a href="{% if case %}{{ url_for('main.case_detail', case_id=case.id) }}{% else %}{{ url_for('main.index') }}{% endif %}" class="flex items-center space-x-2 text-gray-500 hover:text-[#00f0d4] transition-colors text-sm pointer-events-auto">
                 <i class="fas fa-arrow-left text-xs"></i>
-                <span class="font-medium hidden sm:inline">Back</span>
+                <span class="font-medium hidden sm:inline">Case</span>
             </a>
-            <div class="bg-white/5 rounded-lg px-3 py-1 border border-white/5">
-                <span class="text-gray-400 text-xs sm:text-sm font-medium truncate max-w-[150px] sm:max-w-none inline-block">{{ model_filename or 'Anatomy Model' }}</span>
+            <!-- View toggle -->
+            {% if case %}
+            <div class="flex items-center bg-black/50 rounded-lg p-0.5 border border-white/5 pointer-events-auto">
+                <span class="px-3 py-1 text-xs font-medium text-[#00f0d4] bg-[#00f0d4]/15 rounded-md">
+                    <i class="fas fa-cube mr-1"></i>3D
+                </span>
+                {% if case.ct_filename %}
+                <a href="{{ url_for('main.ct_viewer', filename=case.ct_filename) }}" class="px-3 py-1 text-xs text-gray-500 hover:text-[#00f0d4] rounded-md transition-colors">
+                    <i class="fas fa-x-ray mr-1"></i>CT
+                </a>
+                {% endif %}
+                {% if case.video_filename %}
+                <a href="{{ url_for('main.case_detail', case_id=case.id) }}#video" class="px-3 py-1 text-xs text-gray-500 hover:text-[#00f0d4] rounded-md transition-colors">
+                    <i class="fas fa-video mr-1"></i>Video
+                </a>
+                {% endif %}
             </div>
+            {% else %}
+            <div class="bg-white/5 rounded-lg px-3 py-1 border border-white/5">
+                <span class="text-gray-400 text-xs font-medium truncate max-w-[150px] inline-block">{{ model_filename }}</span>
+            </div>
+            {% endif %}
             <div class="w-10 sm:w-16"></div>
         </div>
     </div>

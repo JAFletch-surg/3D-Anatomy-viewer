@@ -34,16 +34,37 @@
 </head>
 <body>
     <!-- Top bar -->
-    <div class="bar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-[44px]">
-        <a href="javascript:history.back()" class="text-gray-500 hover:text-[#00f0d4] text-sm"><i class="fas fa-arrow-left mr-1"></i><span class="hidden sm:inline">Back</span></a>
-        <div class="flex gap-1">
-            <button onclick="sv('axial')" id="v-axial" class="view-btn px-2.5 py-1 text-xs text-gray-500 rounded-md">Axial</button>
-            <button onclick="sv('coronal')" id="v-coronal" class="view-btn px-2.5 py-1 text-xs text-gray-500 rounded-md">Coronal</button>
-            <button onclick="sv('sagittal')" id="v-sagittal" class="view-btn px-2.5 py-1 text-xs text-gray-500 rounded-md">Sagittal</button>
-            <button onclick="sv('multi')" id="v-multi" class="view-btn on px-2.5 py-1 text-xs rounded-md">Multi</button>
-            <button onclick="sv('render')" id="v-render" class="view-btn px-2.5 py-1 text-xs text-gray-500 rounded-md">3D</button>
+    <div class="bar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 h-[44px]">
+        <a href="{% if case %}{{ url_for('main.case_detail', case_id=case.id) }}{% else %}javascript:history.back(){% endif %}" class="text-gray-500 hover:text-[#00f0d4] text-sm shrink-0"><i class="fas fa-arrow-left mr-1"></i><span class="hidden sm:inline">Case</span></a>
+
+        <!-- View toggle: navigate between viewers -->
+        {% if case %}
+        <div class="flex items-center bg-black/50 rounded-lg p-0.5 border border-white/5 shrink-0">
+            {% if case.glb_filename %}
+            <a href="{{ url_for('main.viewer', filename=case.glb_filename) }}" class="px-2.5 py-1 text-xs text-gray-500 hover:text-[#00f0d4] rounded-md transition-colors">
+                <i class="fas fa-cube mr-0.5"></i>3D
+            </a>
+            {% endif %}
+            <span class="px-2.5 py-1 text-xs font-medium text-[#00f0d4] bg-[#00f0d4]/15 rounded-md">
+                <i class="fas fa-x-ray mr-0.5"></i>CT
+            </span>
+            {% if case.video_filename %}
+            <a href="{{ url_for('main.case_detail', case_id=case.id) }}#video" class="px-2.5 py-1 text-xs text-gray-500 hover:text-[#00f0d4] rounded-md transition-colors">
+                <i class="fas fa-video mr-0.5"></i>Vid
+            </a>
+            {% endif %}
         </div>
-        <button onclick="document.getElementById('ctrl').classList.toggle('hidden')" class="text-gray-500 hover:text-[#00f0d4] text-sm"><i class="fas fa-sliders-h"></i></button>
+        {% endif %}
+
+        <!-- Slice view buttons -->
+        <div class="flex gap-0.5 shrink-0">
+            <button onclick="sv('axial')" id="v-axial" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Ax</button>
+            <button onclick="sv('coronal')" id="v-coronal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Cor</button>
+            <button onclick="sv('sagittal')" id="v-sagittal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Sag</button>
+            <button onclick="sv('multi')" id="v-multi" class="view-btn on px-2 py-1 text-xs rounded-md">Multi</button>
+            <button onclick="sv('render')" id="v-render" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">3D</button>
+        </div>
+        <button onclick="document.getElementById('ctrl').classList.toggle('hidden')" class="text-gray-500 hover:text-[#00f0d4] text-sm shrink-0"><i class="fas fa-sliders-h"></i></button>
     </div>
 
     <canvas id="gl"></canvas>
