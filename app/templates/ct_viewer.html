@@ -136,42 +136,69 @@
         // Expose all functions globally immediately so onclick handlers work
         // (module scripts are deferred but onclick bindings need global access)
 
-        const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:true, multiplanarForceRender:true });
+        const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:true, multiplanarForceRender:true, isRadiologicalConvention:false });
         nv.attachToCanvas(document.getElementById("gl"));
         window.nv = nv;
 
-        // Seg label colors (matching 3D viewer)
-        const LC = { 5:[220,20,60], 6:[65,105,225], 10:[255,20,147], 50:[205,133,63], 61:[255,179,71], 111:[50,205,50] };
+        // Seg label colors matching the 3D model viewer exactly
+        // Format: label_value -> [R, G, B] (0-255)
+        const LC = { 5:[203,4,4], 6:[0,101,248], 10:[241,76,76], 50:[255,41,202], 61:[255,178,44], 111:[56,229,77] };
         const segOn = { 5:true, 6:true, 10:true, 50:true, 61:true, 111:true };
+        const LABEL_NAMES = { 5:'Artery', 6:'Vein', 10:'Stomach', 50:'Colon', 61:'Pancreas', 111:'Tumor' };
 
         const WP = { abdomen:[400,40], lung:[1500,-600], bone:[2000,500], brain:[80,40], liver:[150,70], vascular:[600,200] };
 
         const ctUrl = "/static/uploads/{{ ct_filename }}";
         const segUrl = "{{ seg_filename }}";
 
-        // Build volumes array - both CT and seg in ONE call
+        // Build seg colormap JSON in NiiVue's expected format:
+        // { R: [r0,r1,...,r111], G: [...], B: [...], labels: ["","","..."] }
+        function buildSegCmap() {
+            const maxIdx = 112;
+            const R = new Array(maxIdx).fill(0);
+            const G = new Array(maxIdx).fill(0);
+            const B = new Array(maxIdx).fill(0);
+            const labels = new Array(maxIdx).fill("");
+            for (const [lbl, rgb] of Object.entries(LC)) {
+                const i = parseInt(lbl);
+                if (i < maxIdx && segOn[lbl]) {
+                    R[i] = rgb[0]; G[i] = rgb[1]; B[i] = rgb[2];
+                    labels[i] = LABEL_NAMES[lbl] || "";
+                }
+            }
+            return { R, G, B, labels };
+        }
+
+        // Load CT first, then add seg overlay
         const vols = [{ url: ctUrl, colormap: "gray" }];
-        if (segUrl) vols.push({ url: "/static/uploads/" + segUrl, opacity: 0.5, colormap: "actc", cal_min: 0, cal_max: 120, colorbarVisible: false });
+        if (segUrl) vols.push({ url: "/static/uploads/" + segUrl, opacity: 0.7, colorbarVisible: false });
 
         nv.loadVolumes(vols).then(() => {
             setWin(400, 40);
             nv.setSliceType(nv.sliceTypeMultiplanar);
+
+            // Apply custom label colormap to segmentation
+            if (nv.volumes.length > 1) {
+                const seg = nv.volumes[1];
+                seg.setColormapLabel(buildSegCmap());
+                nv.updateGLVolume();
+            }
             document.getElementById("ld").style.display = "none";
         }).catch(e => {
             document.getElementById("ld").innerHTML = '<div class="text-red-400 text-sm p-8">Failed to load: ' + (e.message||e) + '<br><button id="retry-btn" class="mt-3 px-4 py-2 bg-white/5 rounded text-white text-xs">Retry</button></div>';
             document.getElementById("retry-btn")?.addEventListener('click', () => location.reload());
         });
 
-        // Segmentation overlay opacity control
-        function updateSegOpacity() {
+        // Update seg overlay: rebuild colormap with current visibility
+        function updateSeg() {
             if (nv.volumes.length < 2) return;
-            // Average of all visible label sliders
-            let totalAlpha = 0, count = 0;
+            nv.volumes[1].setColormapLabel(buildSegCmap());
+            // Also update overall opacity from average of visible sliders
+            let total = 0, count = 0;
             document.querySelectorAll('input[data-s]').forEach(sl => {
-                const lbl = sl.dataset.s;
-                if (segOn[lbl]) { totalAlpha += parseInt(sl.value); count++; }
+                if (segOn[sl.dataset.s]) { total += parseInt(sl.value); count++; }
             });
-            nv.volumes[1].opacity = count > 0 ? (totalAlpha / count) / 100 : 0;
+            nv.volumes[1].opacity = count > 0 ? (total / count) / 100 : 0;
             nv.updateGLVolume();
         }
 
@@ -236,11 +263,10 @@
                 segOn[k] = !!show;
                 const btn = document.querySelector('.seg-eye[data-s="'+k+'"]');
                 if(btn) btn.innerHTML = show ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+                const sl = document.querySelector('input[data-s="'+k+'"]');
+                if (sl) sl.value = show ? 70 : 0;
             });
-            if (nv.volumes.length > 1) {
-                nv.volumes[1].opacity = show ? 0.5 : 0;
-                nv.updateGLVolume();
-            }
+            updateSeg();
         }
         document.getElementById('seg-show-all')?.addEventListener('click', () => allSeg(1));
         document.getElementById('seg-hide-all')?.addEventListener('click', () => allSeg(0));
@@ -249,11 +275,11 @@
                 const k = this.dataset.s;
                 segOn[k] = !segOn[k];
                 this.innerHTML = segOn[k] ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
-                updateSegOpacity();
+                updateSeg();
             });
         });
         document.querySelectorAll('input[data-s]').forEach(el => {
-            el.addEventListener('input', () => updateSegOpacity());
+            el.addEventListener('input', () => updateSeg());
         });
 
         // Clip planes
