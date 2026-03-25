@@ -263,6 +263,15 @@ def ct_viewer(filename):
     return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename, case=case)
 
 
+@main.route('/split/<case_id>')
+def split_view(case_id):
+    case = db.get_case(case_id)
+    if not case:
+        return redirect(url_for('main.index'))
+    mode = request.args.get('mode', 'ct-3d')
+    return render_template('split_view.html', case=case, mode=mode)
+
+
 @main.route('/static/uploads/<filename>')
 def serve_uploaded_file(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)

@@ -70,7 +70,7 @@
     <canvas id="gl"></canvas>
 
     <!-- Single control panel -->
-    <div id="ctrl" class="bg-black/80 backdrop-blur-xl rounded-xl border border-white/5">
+    <div id="ctrl" class="fixed top-[50px] right-[8px] z-40 bg-black/80 backdrop-blur-xl rounded-xl border border-white/5" style="width:200px; max-height:calc(100vh - 58px); overflow-y:auto;"
         <!-- Window -->
         <div class="section">
             <div class="section-head">
@@ -136,7 +136,7 @@
         // Expose all functions globally immediately so onclick handlers work
         // (module scripts are deferred but onclick bindings need global access)
 
-        const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:true, multiplanarForceRender:true, isRadiologicalConvention:true });
+        const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:false, multiplanarForceRender:true, isRadiologicalConvention:true, crosshairWidth:0 });
         nv.attachToCanvas(document.getElementById("gl"));
         window.nv = nv;
 
