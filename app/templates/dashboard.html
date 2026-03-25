@@ -5,7 +5,7 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
             <h1 class="text-3xl font-bold text-white tracking-tight">Case Library</h1>
             <p class="text-gray-600 mt-1 text-sm">Manage your surgical cases and 3D reconstructions</p>
@@ -17,11 +17,38 @@
     </div>
 
     {% if cases %}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- Search + Sort Bar -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
+        <!-- Search -->
+        <div class="relative flex-1">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs"></i>
+            <input type="text" id="case-search" placeholder="Search by title, patient ID, or notes..."
+                   class="w-full bg-surface-700 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-neon-400/30 focus:ring-1 focus:ring-neon-400/10 transition-all">
+        </div>
+        <!-- Sort -->
+        <div class="flex items-center gap-2 shrink-0">
+            <span class="text-gray-600 text-xs hidden sm:inline">Sort:</span>
+            <button id="sort-btn" class="flex items-center gap-1.5 px-3 py-2.5 bg-surface-700 border border-white/5 rounded-xl text-sm text-gray-400 hover:text-neon-400 hover:border-neon-400/20 transition-all">
+                <i class="fas fa-arrow-down-short-wide text-xs"></i>
+                <span id="sort-label">Newest</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Case count -->
+    <div class="mb-4">
+        <span id="case-count" class="text-gray-600 text-xs"><span id="visible-count">{{ cases|length }}</span> of {{ cases|length }} cases</span>
+    </div>
+
+    <!-- Case Grid -->
+    <div id="case-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {% for case in cases %}
         <a href="{{ url_for('main.case_detail', case_id=case.id) }}"
-           class="group bg-surface-700 border border-white/5 rounded-2xl overflow-hidden hover:border-neon-400/20 hover:shadow-xl hover:shadow-neon-400/5 transition-all duration-300 hover:-translate-y-1">
-            <!-- Thumbnail -->
+           class="case-card group bg-surface-700 border border-white/5 rounded-2xl overflow-hidden hover:border-neon-400/20 hover:shadow-xl hover:shadow-neon-400/5 transition-all duration-300 hover:-translate-y-1"
+           data-title="{{ case.title|lower }}"
+           data-patient="{{ (case.patient_id or '')|lower }}"
+           data-notes="{{ (case.notes or '')|lower }}"
+           data-date="{{ case.created_at }}">
             {% if case.thumbnail %}
             <div class="h-36 bg-black overflow-hidden">
                 <img src="{{ url_for('main.serve_uploaded_file', filename=case.thumbnail) }}" alt="3D Preview" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300">
@@ -71,6 +98,12 @@
         {% endfor %}
     </div>
 
+    <!-- No results message -->
+    <div id="no-results" class="hidden flex flex-col items-center justify-center py-16">
+        <i class="fas fa-search text-2xl text-gray-700 mb-3"></i>
+        <p class="text-gray-500 text-sm">No cases match your search</p>
+    </div>
+
     {% else %}
     <div class="flex flex-col items-center justify-center py-24">
         <div class="w-20 h-20 bg-surface-700 rounded-2xl flex items-center justify-center mb-6 border border-white/5">
@@ -85,4 +118,60 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if cases %}
+<script>
+    const searchInput = document.getElementById('case-search');
+    const sortBtn = document.getElementById('sort-btn');
+    const sortLabel = document.getElementById('sort-label');
+    const grid = document.getElementById('case-grid');
+    const noResults = document.getElementById('no-results');
+    const visibleCount = document.getElementById('visible-count');
+    const cards = Array.from(document.querySelectorAll('.case-card'));
+
+    let sortOrder = 'desc'; // newest first (default from server)
+
+    // Search: filter cards by title, patient ID, notes
+    searchInput.addEventListener('input', function() {
+        const q = this.value.toLowerCase().trim();
+        let count = 0;
+        cards.forEach(card => {
+            const match = !q ||
+                card.dataset.title.includes(q) ||
+                card.dataset.patient.includes(q) ||
+                card.dataset.notes.includes(q);
+            card.style.display = match ? '' : 'none';
+            if (match) count++;
+        });
+        visibleCount.textContent = count;
+        noResults.classList.toggle('hidden', count > 0);
+        grid.classList.toggle('hidden', count === 0);
+    });
+
+    // Sort: toggle between newest/oldest
+    sortBtn.addEventListener('click', function() {
+        sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+        sortLabel.textContent = sortOrder === 'desc' ? 'Newest' : 'Oldest';
+        sortBtn.querySelector('i').className = sortOrder === 'desc'
+            ? 'fas fa-arrow-down-short-wide text-xs'
+            : 'fas fa-arrow-up-short-wide text-xs';
+
+        cards.sort((a, b) => {
+            const da = a.dataset.date, db = b.dataset.date;
+            return sortOrder === 'desc' ? db.localeCompare(da) : da.localeCompare(db);
+        });
+        cards.forEach(card => grid.appendChild(card));
+    });
+
+    // Focus search on / key
+    document.addEventListener('keydown', e => {
+        if (e.key === '/' && document.activeElement !== searchInput) {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}
