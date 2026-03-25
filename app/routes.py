@@ -122,11 +122,11 @@ def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minute
 
 
 def get_file_url(filename):
-    """Return a URL for serving a file — signed GCS URL or local path."""
-    if get_gcs_bucket() and filename:
-        blob_path = f"uploads/{filename}"
-        return gcs_signed_url(blob_path, method="GET", expiration_minutes=120)
-    return f"/static/uploads/{filename}"
+    """Return a URL for serving a file. Always use our own route which
+    handles both local and GCS transparently."""
+    if filename:
+        return f"/static/uploads/{filename}"
+    return ""
 
 
 # --- Auth helpers ---
@@ -186,7 +186,11 @@ def get_upload_url():
     safe_name = secure_filename(filename)
     blob_path = f"uploads/case_{case_id}_{safe_name}"
 
-    signed_url = gcs_signed_url(blob_path, method="PUT", content_type=content_type, expiration_minutes=15)
+    try:
+        signed_url = gcs_signed_url(blob_path, method="PUT", content_type=content_type, expiration_minutes=15)
+    except Exception as e:
+        logger.error(f"Signed URL generation failed: {e}")
+        return jsonify({'error': 'Signed URL generation failed. Use standard upload.'}), 500
 
     return jsonify({
         'signed_url': signed_url,
@@ -336,14 +340,7 @@ def case_detail(case_id):
     case = db.get_case(case_id)
     if not case:
         return redirect(url_for('main.index'))
-    # Generate signed URLs for file serving if GCS enabled
-    file_urls = {}
-    if get_gcs_bucket():
-        for key in ['glb_filename', 'ct_filename', 'nifti_filename', 'video_filename', 'thumbnail']:
-            fname = case.get(key)
-            if fname:
-                file_urls[key] = get_file_url(fname)
-    response = make_response(render_template('case_detail.html', case=case, file_urls=file_urls, gcs_enabled=bool(get_gcs_bucket())))
+    response = make_response(render_template('case_detail.html', case=case, gcs_enabled=bool(get_gcs_bucket())))
     return ensure_user_id(response)
 
 
@@ -490,8 +487,7 @@ def viewer(filename):
     if filename.startswith('case_'):
         case_id = filename.replace('case_', '').split('_')[0]
         case = db.get_case(case_id)
-    file_url = get_file_url(filename) if get_gcs_bucket() else f"/static/uploads/{filename}"
-    return render_template('viewer.html', model_filename=filename, case_id=case_id, case=case, file_url=file_url)
+    return render_template('viewer.html', model_filename=filename, case_id=case_id, case=case)
 
 
 @main.route('/ct-viewer/<filename>')
@@ -503,9 +499,7 @@ def ct_viewer(filename):
         case = db.get_case(case_id)
         if case and case.get('nifti_filename'):
             seg_filename = case['nifti_filename']
-    ct_url = get_file_url(filename) if get_gcs_bucket() else f"/static/uploads/{filename}"
-    seg_url = get_file_url(seg_filename) if (get_gcs_bucket() and seg_filename) else (f"/static/uploads/{seg_filename}" if seg_filename else '')
-    return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename, case=case, ct_url=ct_url, seg_url=seg_url)
+    return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename, case=case)
 
 
 @main.route('/split/<case_id>')
@@ -521,19 +515,35 @@ def split_view(case_id):
 
 @main.route('/static/uploads/<filename>')
 def serve_uploaded_file(filename):
+    # Try local first
+    local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+    if os.path.exists(local_path):
+        return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+    # Fall back to streaming from GCS
     if get_gcs_bucket():
-        # Redirect to signed GCS URL
-        signed = get_file_url(filename)
-        return redirect(signed)
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+        from flask import Response
+        try:
+            client = get_storage_client()
+            bucket = client.bucket(get_gcs_bucket())
+            blob = bucket.blob(f"uploads/{filename}")
+            content = blob.download_as_bytes()
+            # Guess content type
+            ct = 'application/octet-stream'
+            if filename.endswith('.glb'): ct = 'model/gltf-binary'
+            elif filename.endswith('.nii.gz') or filename.endswith('.nii'): ct = 'application/gzip'
+            elif filename.endswith('.mp4'): ct = 'video/mp4'
+            elif filename.endswith('.webm'): ct = 'video/webm'
+            elif filename.endswith('.png'): ct = 'image/png'
+            return Response(content, content_type=ct)
+        except Exception as e:
+            logger.error(f"GCS download failed for {filename}: {e}")
+            return "File not found", 404
+    return "File not found", 404
 
 
 @main.route('/models/<filename>')
 def serve_model_file(filename):
-    if get_gcs_bucket():
-        signed = get_file_url(filename)
-        return redirect(signed)
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+    return serve_uploaded_file(filename)
 
 
 @main.route('/health')
