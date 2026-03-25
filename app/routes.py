@@ -30,6 +30,25 @@ def get_storage_client():
     return storage.Client()
 
 
+def _get_signing_credentials():
+    """Get credentials that can sign URLs on Cloud Run.
+    Cloud Run compute credentials can't sign directly — we need to
+    use the IAM signBlob API via a service account email."""
+    import google.auth
+    from google.auth import compute_engine
+    credentials, project = google.auth.default()
+    # On Cloud Run, credentials are compute engine credentials
+    # which can't sign. Use IAM-based signing instead.
+    if hasattr(credentials, 'service_account_email'):
+        signing_credentials = compute_engine.IDTokenCredentials(
+            request=google.auth.transport.requests.Request(),
+            target_audience="",
+            service_account_email=credentials.service_account_email,
+        )
+        return credentials.service_account_email
+    return None
+
+
 def gcs_upload_blob(local_path, blob_path):
     """Upload a local file to GCS."""
     bucket_name = get_gcs_bucket()
@@ -68,11 +87,20 @@ def gcs_delete_blob(blob_path):
 
 
 def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minutes=60):
-    """Generate a v4 signed URL for a GCS blob."""
+    """Generate a v4 signed URL for a GCS blob.
+    On Cloud Run, uses IAM signBlob API since compute credentials
+    don't have a private key for direct signing."""
+    import google.auth
+    import google.auth.transport.requests
+
     bucket_name = get_gcs_bucket()
     client = get_storage_client()
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_path)
+
+    # Get the service account email for IAM-based signing
+    credentials, project = google.auth.default()
+    sa_email = getattr(credentials, 'service_account_email', None)
 
     kwargs = {
         'version': 'v4',
@@ -81,6 +109,16 @@ def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minute
     }
     if content_type and method == 'PUT':
         kwargs['content_type'] = content_type
+
+    # If running on Cloud Run (compute credentials), use IAM signing
+    if sa_email and 'compute' in sa_email:
+        from google.auth.transport import requests as auth_requests
+        kwargs['service_account_email'] = sa_email
+        kwargs['access_token'] = credentials.token
+        # Refresh token if needed
+        if not credentials.token:
+            credentials.refresh(auth_requests.Request())
+            kwargs['access_token'] = credentials.token
 
     return blob.generate_signed_url(**kwargs)
 
