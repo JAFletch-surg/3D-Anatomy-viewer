@@ -276,6 +276,30 @@ document.addEventListener('DOMContentLoaded', function() {
         resetCameraView();
 
         console.log(`Model loaded: ${totalVertices} vertices, ${Math.round(totalPolygons)} polygons`);
+
+        // Auto-capture thumbnail after a short delay for the camera to settle
+        setTimeout(() => autoCaptureThumbnail(), 1500);
+    }
+
+    function autoCaptureThumbnail() {
+        // Only capture if we have a caseId in the URL query or data attribute
+        const caseId = window.caseIdForThumbnail;
+        if (!caseId || !renderer) return;
+
+        try {
+            renderer.render(scene, camera);
+            renderer.domElement.toBlob(function(blob) {
+                if (!blob) return;
+                const formData = new FormData();
+                formData.append('thumbnail', blob, 'thumb.png');
+                fetch('/cases/' + caseId + '/save-thumbnail', { method: 'POST', body: formData })
+                    .then(r => r.json())
+                    .then(d => { if (d.success) console.log('Thumbnail saved'); })
+                    .catch(() => {}); // Silent fail
+            }, 'image/png');
+        } catch (e) {
+            console.warn('Thumbnail capture failed:', e);
+        }
     }
 
     function getMaterialColor(nodeName) {

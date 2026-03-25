@@ -21,10 +21,20 @@
         {% for case in cases %}
         <a href="{{ url_for('main.case_detail', case_id=case.id) }}"
            class="group bg-surface-700 border border-white/5 rounded-2xl overflow-hidden hover:border-neon-400/20 hover:shadow-xl hover:shadow-neon-400/5 transition-all duration-300 hover:-translate-y-1">
-            <div class="p-5 pb-3">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="w-10 h-10 bg-neon-400/10 rounded-xl flex items-center justify-center border border-neon-400/10 group-hover:bg-neon-400/15 transition-colors">
-                        <i class="fas fa-cube text-neon-400 text-sm"></i>
+            <!-- Thumbnail -->
+            {% if case.thumbnail %}
+            <div class="h-36 bg-black overflow-hidden">
+                <img src="{{ url_for('main.serve_uploaded_file', filename=case.thumbnail) }}" alt="3D Preview" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300">
+            </div>
+            {% else %}
+            <div class="h-24 bg-gradient-to-br from-surface-800 to-surface-700 flex items-center justify-center">
+                <i class="fas fa-cube text-2xl text-white/5"></i>
+            </div>
+            {% endif %}
+            <div class="p-4 pb-3">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="w-8 h-8 bg-neon-400/10 rounded-lg flex items-center justify-center border border-neon-400/10 group-hover:bg-neon-400/15 transition-colors">
+                        <i class="fas fa-cube text-neon-400 text-xs"></i>
                     </div>
                     {% if case.status == 'complete' %}
                     <span class="px-2.5 py-1 text-xs font-medium bg-neon-400/10 text-neon-400 rounded-full">Ready</span>

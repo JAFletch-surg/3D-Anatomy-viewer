@@ -180,6 +180,21 @@ def upload_ct(case_id):
     return jsonify({'success': True, 'filename': ct_name})
 
 
+@main.route('/cases/<case_id>/save-thumbnail', methods=['POST'])
+def save_thumbnail(case_id):
+    case = db.get_case(case_id)
+    if not case:
+        return jsonify({'error': 'Case not found'}), 404
+    if 'thumbnail' not in request.files:
+        return jsonify({'error': 'No thumbnail'}), 400
+    thumb = request.files['thumbnail']
+    thumb_name = f"case_{case_id}_thumb.png"
+    thumb_path = os.path.join(current_app.config['UPLOAD_FOLDER'], thumb_name)
+    thumb.save(thumb_path)
+    db.update_case(case_id, thumbnail=thumb_name)
+    return jsonify({'success': True})
+
+
 # --- Legacy upload endpoint ---
 
 @main.route('/upload', methods=['POST'])
@@ -228,7 +243,11 @@ def get_status(filename):
 
 @main.route('/viewer/<filename>')
 def viewer(filename):
-    return render_template('viewer.html', model_filename=filename)
+    # Try to find the case ID for thumbnail capture
+    case_id = ''
+    if filename.startswith('case_'):
+        case_id = filename.replace('case_', '').split('_')[0]
+    return render_template('viewer.html', model_filename=filename, case_id=case_id)
 
 
 @main.route('/ct-viewer/<filename>')

@@ -3,179 +3,137 @@
 {% block title %}CME3D - {{ case.title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <div>
             <a href="{{ url_for('main.index') }}" class="text-gray-600 hover:text-neon-400 text-sm transition-colors">
-                <i class="fas fa-arrow-left mr-1"></i> Back to Cases
+                <i class="fas fa-arrow-left mr-1"></i> Cases
             </a>
-            <h1 class="text-2xl font-bold text-white mt-3">{{ case.title }}</h1>
-            <div class="flex items-center space-x-4 mt-1">
+            <h1 class="text-xl font-bold text-white mt-2">{{ case.title }}</h1>
+            <div class="flex items-center space-x-3 mt-1">
                 {% if case.patient_id %}
                 <span class="text-gray-500 text-sm">ID: {{ case.patient_id }}</span>
                 {% endif %}
                 <span class="text-gray-700 text-xs">{{ case.created_at[:10] }}</span>
             </div>
         </div>
-        <div class="flex items-center space-x-3">
-            {% if case.glb_filename %}
-            <a href="{{ url_for('main.viewer', filename=case.glb_filename) }}"
-               class="inline-flex items-center px-5 py-2.5 bg-neon-400 text-black text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-neon-400/30 transition-all">
-                <i class="fas fa-cube mr-2"></i>Open 3D Viewer
-            </a>
-            {% endif %}
-            <form action="{{ url_for('main.delete_case', case_id=case.id) }}" method="POST" onsubmit="return confirm('Delete this case and all associated files?')">
-                <button type="submit" class="px-4 py-2 text-sm text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all">
-                    <i class="fas fa-trash mr-1"></i>Delete
-                </button>
-            </form>
-        </div>
+        <form action="{{ url_for('main.delete_case', case_id=case.id) }}" method="POST" onsubmit="return confirm('Delete this case?')">
+            <button type="submit" class="px-3 py-1.5 text-xs text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
+                <i class="fas fa-trash mr-1"></i>Delete
+            </button>
+        </form>
     </div>
 
     {% if case.notes %}
-    <div class="bg-surface-700 border border-white/5 rounded-2xl p-5 mb-6">
-        <h3 class="text-xs font-semibold text-neon-400 uppercase tracking-wider mb-2">Notes</h3>
+    <div class="bg-surface-700 border border-white/5 rounded-xl p-4 mb-5">
         <p class="text-gray-400 text-sm leading-relaxed">{{ case.notes }}</p>
     </div>
     {% endif %}
 
-    <!-- Content Grid: 3 columns -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Tab Bar -->
+    <div class="flex items-center space-x-1 mb-4 border-b border-white/5 pb-0">
+        <button onclick="switchTab('model')" id="tab-model" class="tab-btn px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-all text-neon-400 border-neon-400 bg-neon-400/5">
+            <i class="fas fa-cube mr-1.5"></i>3D Model
+        </button>
+        <button onclick="switchTab('ct')" id="tab-ct" class="tab-btn px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-all text-gray-500 border-transparent hover:text-gray-300">
+            <i class="fas fa-x-ray mr-1.5"></i>CT Scan
+        </button>
+        <button onclick="switchTab('video')" id="tab-video" class="tab-btn px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-all text-gray-500 border-transparent hover:text-gray-300">
+            <i class="fas fa-video mr-1.5"></i>Video
+        </button>
+    </div>
 
-        <!-- 3D Model -->
-        <div class="bg-surface-700 border border-white/5 rounded-2xl overflow-hidden">
-            <div class="p-5 border-b border-white/5">
-                <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
-                    <i class="fas fa-cube mr-2 text-xs"></i>3D Reconstruction
-                </h2>
-            </div>
+    <!-- Tab Content -->
+    <div class="relative">
+
+        <!-- 3D Model Tab -->
+        <div id="content-model" class="tab-content">
             {% if case.glb_filename %}
-            <div class="p-5">
-                <div class="bg-black rounded-xl p-6 text-center border border-white/5">
-                    <div class="w-14 h-14 bg-neon-400/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-neon-400/10">
-                        <i class="fas fa-cube text-neon-400 text-xl"></i>
-                    </div>
-                    <p class="text-white font-medium text-sm mb-1">Model Ready</p>
-                    <p class="text-gray-600 text-xs mb-4">{{ case.glb_filename }}</p>
-                    <a href="{{ url_for('main.viewer', filename=case.glb_filename) }}"
-                       class="inline-flex items-center px-5 py-2 bg-neon-400 text-black text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-neon-400/30 transition-all">
-                        <i class="fas fa-eye mr-2"></i>View 3D
-                    </a>
-                </div>
+            <div class="bg-black rounded-2xl border border-white/5 overflow-hidden" style="height: 70vh;">
+                <iframe id="viewer-frame" src="{{ url_for('main.viewer', filename=case.glb_filename) }}" class="w-full h-full border-0" allow="fullscreen"></iframe>
             </div>
             {% elif case.status == 'processing' %}
-            <div class="p-5">
-                <div class="bg-black rounded-xl p-6 text-center border border-white/5">
-                    <div class="w-14 h-14 bg-yellow-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-yellow-500/10">
-                        <i class="fas fa-spinner fa-spin text-yellow-400 text-xl"></i>
-                    </div>
-                    <p class="text-white font-medium text-sm mb-1">Processing</p>
-                    <p class="text-gray-600 text-xs mb-3">Generating 3D model...</p>
-                    <div class="w-40 bg-surface-800 rounded-full h-1.5 mx-auto">
-                        <div id="process-bar" class="bg-neon-400 h-1.5 rounded-full transition-all" style="width: 30%"></div>
-                    </div>
+            <div class="bg-surface-700 border border-white/5 rounded-2xl p-12 text-center">
+                <div class="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-yellow-500/10">
+                    <i class="fas fa-spinner fa-spin text-yellow-400 text-2xl"></i>
+                </div>
+                <p class="text-white font-medium mb-1">Processing</p>
+                <p class="text-gray-600 text-xs mb-4">Generating 3D model...</p>
+                <div class="w-48 bg-surface-800 rounded-full h-1.5 mx-auto">
+                    <div id="process-bar" class="bg-neon-400 h-1.5 rounded-full transition-all" style="width: 30%"></div>
                 </div>
             </div>
             {% elif case.status == 'error' %}
-            <div class="p-5">
-                <div class="bg-black rounded-xl p-6 text-center border border-white/5">
-                    <div class="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-500/10">
-                        <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
-                    </div>
-                    <p class="text-white font-medium text-sm mb-1">Processing Failed</p>
-                    <label class="inline-flex items-center px-4 py-2 bg-neon-400/10 text-neon-400 text-xs font-medium rounded-xl cursor-pointer hover:bg-neon-400/20 transition-all mt-3">
-                        <i class="fas fa-redo mr-2"></i>Re-upload Scan
-                        <input type="file" class="hidden" id="rescan-input" accept=".nii,.nii.gz,.gz">
-                    </label>
+            <div class="bg-surface-700 border border-white/5 rounded-2xl p-12 text-center">
+                <div class="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-500/10">
+                    <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
                 </div>
+                <p class="text-white font-medium mb-2">Processing Failed</p>
+                <label class="inline-flex items-center px-4 py-2 bg-neon-400/10 text-neon-400 text-sm font-medium rounded-xl cursor-pointer hover:bg-neon-400/20 transition-all">
+                    <i class="fas fa-redo mr-2"></i>Re-upload Scan
+                    <input type="file" class="hidden" id="rescan-input" accept=".nii,.nii.gz,.gz">
+                </label>
             </div>
             {% else %}
-            <div class="p-5">
-                <div class="relative border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
+            <div class="bg-surface-700 border border-white/5 rounded-2xl p-12">
+                <div class="relative border-2 border-dashed border-white/10 rounded-xl p-10 text-center hover:border-neon-400/30 transition-all cursor-pointer group max-w-md mx-auto">
                     <input type="file" id="scan-upload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
-                    <div class="w-10 h-10 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
-                        <i class="fas fa-cloud-upload-alt text-neon-400 text-sm"></i>
+                    <div class="w-14 h-14 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
+                        <i class="fas fa-cloud-upload-alt text-neon-400 text-lg"></i>
                     </div>
-                    <p class="text-gray-400 text-xs font-medium">Upload segmentation</p>
-                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz</p>
+                    <p class="text-gray-300 text-sm font-medium">Upload segmentation file</p>
+                    <p class="text-gray-600 text-xs mt-1">.nii, .nii.gz files</p>
                 </div>
             </div>
             {% endif %}
         </div>
 
-        <!-- CT Scan -->
-        <div class="bg-surface-700 border border-white/5 rounded-2xl overflow-hidden">
-            <div class="p-5 border-b border-white/5">
-                <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
-                    <i class="fas fa-x-ray mr-2 text-xs"></i>CT Scan
-                </h2>
-            </div>
+        <!-- CT Scan Tab -->
+        <div id="content-ct" class="tab-content hidden">
             {% if case.ct_filename %}
-            <div class="p-5">
-                <div class="bg-black rounded-xl p-6 text-center border border-white/5">
-                    <div class="w-14 h-14 bg-neon-400/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-neon-400/10">
-                        <i class="fas fa-x-ray text-neon-400 text-xl"></i>
-                    </div>
-                    <p class="text-white font-medium text-sm mb-1">CT Scan Loaded</p>
-                    <p class="text-gray-600 text-xs mb-4">{{ case.ct_filename }}</p>
-                    <a href="{{ url_for('main.ct_viewer', filename=case.ct_filename) }}"
-                       class="inline-flex items-center px-5 py-2 bg-neon-400 text-black text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-neon-400/30 transition-all">
-                        <i class="fas fa-eye mr-2"></i>View Slices
-                    </a>
-                </div>
-                <div class="flex items-center justify-between mt-3">
-                    <span class="text-gray-700 text-xs">{{ case.ct_filename }}</span>
-                    <label class="text-gray-600 hover:text-neon-400 text-xs cursor-pointer transition-colors">
-                        <i class="fas fa-sync-alt mr-1"></i>Replace
-                        <input type="file" class="hidden" id="replace-ct" accept=".nii,.nii.gz,.gz">
-                    </label>
-                </div>
+            <div class="bg-black rounded-2xl border border-white/5 overflow-hidden" style="height: 70vh;">
+                <iframe id="ct-frame" class="w-full h-full border-0" allow="fullscreen"></iframe>
             </div>
             {% else %}
-            <div class="p-5">
-                <div class="relative border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
+            <div class="bg-surface-700 border border-white/5 rounded-2xl p-12">
+                <div class="relative border-2 border-dashed border-white/10 rounded-xl p-10 text-center hover:border-neon-400/30 transition-all cursor-pointer group max-w-md mx-auto">
                     <input type="file" id="ct-upload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
-                    <div class="w-10 h-10 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
-                        <i class="fas fa-x-ray text-neon-400 text-sm"></i>
+                    <div class="w-14 h-14 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
+                        <i class="fas fa-x-ray text-neon-400 text-lg"></i>
                     </div>
-                    <p class="text-gray-400 text-xs font-medium">Upload CT scan</p>
-                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz</p>
+                    <p class="text-gray-300 text-sm font-medium">Upload CT scan</p>
+                    <p class="text-gray-600 text-xs mt-1">.nii, .nii.gz files</p>
                 </div>
             </div>
             {% endif %}
         </div>
 
-        <!-- Video -->
-        <div class="bg-surface-700 border border-white/5 rounded-2xl overflow-hidden">
-            <div class="p-5 border-b border-white/5">
-                <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
-                    <i class="fas fa-video mr-2 text-xs"></i>Operative Video
-                </h2>
-            </div>
+        <!-- Video Tab -->
+        <div id="content-video" class="tab-content hidden">
             {% if case.video_filename %}
-            <div class="p-5">
-                <video controls class="w-full rounded-xl bg-black border border-white/5" preload="metadata">
+            <div class="bg-black rounded-2xl border border-white/5 overflow-hidden">
+                <video id="case-video" controls controlslist="nodownload" class="w-full rounded-2xl" style="max-height: 70vh;" preload="metadata">
                     <source src="{{ url_for('main.serve_uploaded_file', filename=case.video_filename) }}">
                     Your browser does not support the video element.
                 </video>
-                <div class="flex items-center justify-between mt-3">
-                    <span class="text-gray-700 text-xs">{{ case.video_filename }}</span>
-                    <label class="text-gray-600 hover:text-neon-400 text-xs cursor-pointer transition-colors">
-                        <i class="fas fa-sync-alt mr-1"></i>Replace
-                        <input type="file" class="hidden" id="replace-video" accept=".mp4,.webm,.mov,.avi">
-                    </label>
-                </div>
+            </div>
+            <div class="flex items-center justify-between mt-3 px-1">
+                <span class="text-gray-700 text-xs">{{ case.video_filename }}</span>
+                <label class="text-gray-600 hover:text-neon-400 text-xs cursor-pointer transition-colors">
+                    <i class="fas fa-sync-alt mr-1"></i>Replace video
+                    <input type="file" class="hidden" id="replace-video" accept=".mp4,.webm,.mov,.avi">
+                </label>
             </div>
             {% else %}
-            <div class="p-5">
-                <div class="relative border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
+            <div class="bg-surface-700 border border-white/5 rounded-2xl p-12">
+                <div class="relative border-2 border-dashed border-white/10 rounded-xl p-10 text-center hover:border-neon-400/30 transition-all cursor-pointer group max-w-md mx-auto">
                     <input type="file" id="video-upload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".mp4,.webm,.mov,.avi">
-                    <div class="w-10 h-10 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
-                        <i class="fas fa-film text-neon-400 text-sm"></i>
+                    <div class="w-14 h-14 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
+                        <i class="fas fa-film text-neon-400 text-lg"></i>
                     </div>
-                    <p class="text-gray-400 text-xs font-medium">Upload video</p>
-                    <p class="text-gray-700 text-xs mt-1">MP4, WebM, MOV, AVI</p>
+                    <p class="text-gray-300 text-sm font-medium">Upload operative video</p>
+                    <p class="text-gray-600 text-xs mt-1">MP4, WebM, MOV, AVI</p>
                 </div>
             </div>
             {% endif %}
@@ -187,7 +145,41 @@
 {% block scripts %}
 <script>
     const caseId = "{{ case.id }}";
+    let ctFrameLoaded = false;
 
+    // Tab switching
+    function switchTab(tab) {
+        // Hide all content, deactivate all tabs
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(el => {
+            el.className = el.className.replace(/text-neon-400 border-neon-400 bg-neon-400\/5/g, 'text-gray-500 border-transparent');
+        });
+
+        // Show selected content, activate tab
+        document.getElementById('content-' + tab)?.classList.remove('hidden');
+        const btn = document.getElementById('tab-' + tab);
+        if (btn) {
+            btn.className = btn.className.replace(/text-gray-500 border-transparent/g, 'text-neon-400 border-neon-400 bg-neon-400/5');
+        }
+
+        // Lazy-load CT iframe on first switch
+        if (tab === 'ct' && !ctFrameLoaded) {
+            const ctFrame = document.getElementById('ct-frame');
+            {% if case.ct_filename %}
+            if (ctFrame && !ctFrame.src) {
+                ctFrame.src = "{{ url_for('main.ct_viewer', filename=case.ct_filename) }}";
+                ctFrameLoaded = true;
+            }
+            {% endif %}
+        }
+
+        // Pause video when switching away
+        const video = document.getElementById('case-video');
+        if (video && tab !== 'video') video.pause();
+    }
+    window.switchTab = switchTab;
+
+    // File uploads
     async function uploadFile(url, fieldName, file) {
         const formData = new FormData();
         formData.append(fieldName, file);
@@ -215,6 +207,7 @@
     bindUpload('video-upload', '/cases/' + caseId + '/upload-video', 'video_file', 'Video uploaded');
     bindUpload('replace-video', '/cases/' + caseId + '/upload-video', 'video_file', 'Video replaced');
 
+    // Poll processing status
     {% if case.status == 'processing' and case.nifti_filename %}
     (function pollStatus() {
         fetch('/status/{{ case.nifti_filename }}')
