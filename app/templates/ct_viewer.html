@@ -68,7 +68,7 @@
     <canvas id="niivue-canvas"></canvas>
 
     <!-- Right Side Panels -->
-    <div id="panels-container" class="fixed top-14 right-4 z-40 space-y-2 right-panels" style="width: 260px;">
+    <div id="panels-container" class="fixed top-14 right-2 z-40 space-y-2 right-panels" style="width: 220px;">
 
         <!-- Windowing Panel (collapsible) -->
         <div class="glass rounded-2xl">
@@ -233,7 +233,7 @@
     </div>
 
     <script type="module">
-        import { Niivue, NVImage } from "https://esm.sh/@niivue/niivue@0.44.1";
+        import { Niivue } from "https://esm.sh/@niivue/niivue@0.44.1";
 
         const nv = new Niivue({
             backColor: [0, 0, 0, 1],
@@ -245,15 +245,36 @@
         nv.attachToCanvas(document.getElementById("niivue-canvas"));
         window._nv = nv;
 
-        // Segmentation label colours matching 3D viewer (R,G,B,A 0-255)
-        const segColors = {
-            5:   [220, 20,  60,  180], // Artery
-            6:   [65,  105, 225, 180], // Vein
-            10:  [255, 20,  147, 180], // Stomach
-            50:  [205, 133, 63,  180], // Colon
-            61:  [255, 179, 71,  180], // Pancreas
-            111: [50,  205, 50,  180], // Tumor
+        // Label colours matching the 3D viewer exactly
+        const labelDefs = {
+            5:   { R: 220, G: 20,  B: 60,  A: 178 },  // Artery - Crimson
+            6:   { R: 65,  G: 105, B: 225, A: 178 },  // Vein - Royal Blue
+            10:  { R: 255, G: 20,  B: 147, A: 178 },  // Stomach - Deep Pink
+            50:  { R: 205, G: 133, B: 63,  A: 178 },  // Colon - Peru
+            61:  { R: 255, G: 179, B: 71,  A: 178 },  // Pancreas - Sandy
+            111: { R: 50,  G: 205, B: 50,  A: 178 },  // Tumor - Lime Green
         };
+
+        const segVisible = {};
+        Object.keys(labelDefs).forEach(k => segVisible[k] = true);
+
+        // Build a custom colormap LUT: flat Uint8Array of RGBA values, 256 entries
+        function buildCustomCmapLUT() {
+            // NiiVue custom colormaps use a flat RGBA array with 256 entries
+            const lut = new Uint8Array(256 * 4).fill(0);
+            for (const [label, def] of Object.entries(labelDefs)) {
+                const idx = parseInt(label);
+                if (idx < 256 && segVisible[label]) {
+                    const slider = document.querySelector('.seg-slider[data-seg="' + label + '"]');
+                    const alpha = slider ? Math.round(parseInt(slider.value) * 2.55) : def.A;
+                    lut[idx * 4]     = def.R;
+                    lut[idx * 4 + 1] = def.G;
+                    lut[idx * 4 + 2] = def.B;
+                    lut[idx * 4 + 3] = alpha;
+                }
+            }
+            return lut;
+        }
 
         const presets = {
             abdomen:  { ww: 400,  wl: 40 },
@@ -266,46 +287,50 @@
 
         const ctUrl = "/static/uploads/{{ ct_filename }}";
         const segUrl = "{{ seg_filename }}";
+        const hasSegmentation = segUrl && segUrl.length > 0;
 
-        // Build the volume list — CT first, then segmentation overlay
-        const volumes = [{ url: ctUrl, colormap: "gray" }];
-        if (segUrl) {
-            volumes.push({
-                url: "/static/uploads/" + segUrl,
-                opacity: 0.7,
-                colormap: "actc",
-                colormapLabel: buildSegColormapLabel(),
-            });
-        }
+        // Register our custom colormap before loading
+        const cmapName = "seg_labels";
 
-        // Build a NiiVue colormap label table for the segmentation
-        // This is an array of {r,g,b,a} objects indexed by label value
-        function buildSegColormapLabel() {
-            // Create entries: array of objects with R,G,B,A (0-255)
-            // We need enough entries to cover label 111
-            const maxLabel = 112;
-            const cmap = new Array(maxLabel);
-            // All transparent by default
-            for (let i = 0; i < maxLabel; i++) {
-                cmap[i] = { R: 0, G: 0, B: 0, A: 0 };
-            }
-            for (const [label, rgba] of Object.entries(segColors)) {
-                const idx = parseInt(label);
-                if (idx < maxLabel) {
-                    cmap[idx] = { R: rgba[0], G: rgba[1], B: rgba[2], A: rgba[3] };
-                }
-            }
-            return cmap;
-        }
-
-        // Load all volumes in a single call
-        nv.loadVolumes(volumes).then(() => {
+        // Step 1: Load CT volume
+        nv.loadVolumes([{ url: ctUrl, colormap: "gray" }]).then(() => {
             applyWindow(400, 40);
             nv.setSliceType(nv.sliceTypeMultiplanar);
-            document.getElementById("loading-overlay").style.display = "none";
-            console.log("Loaded volumes:", nv.volumes.length);
+
+            if (!hasSegmentation) {
+                document.getElementById("loading-overlay").style.display = "none";
+                return;
+            }
+
+            // Step 2: Register custom colormap, then add segmentation
+            const lut = buildCustomCmapLUT();
+            // addColormap: name, R array, G array, B array, A array (each 256 entries)
+            const R = [], G = [], B = [], A = [];
+            for (let i = 0; i < 256; i++) {
+                R.push(lut[i*4]);
+                G.push(lut[i*4+1]);
+                B.push(lut[i*4+2]);
+                A.push(lut[i*4+3]);
+            }
+            nv.addColormap(cmapName, R, G, B, A);
+
+            // Step 3: Add segmentation overlay
+            nv.addVolumeFromUrl({
+                url: "/static/uploads/" + segUrl,
+                colormap: cmapName,
+                opacity: 1.0,
+                cal_min: 0,
+                cal_max: 255,
+                colorbarVisible: false,
+            }).then(() => {
+                console.log("Segmentation loaded, volumes:", nv.volumes.length);
+                document.getElementById("loading-overlay").style.display = "none";
+            }).catch(err => {
+                console.warn("Segmentation overlay failed:", err);
+                document.getElementById("loading-overlay").style.display = "none";
+            });
         }).catch(err => {
-            console.error("Failed to load:", err);
+            console.error("Failed to load CT:", err);
             document.getElementById("loading-overlay").innerHTML =
                 '<div class="glass rounded-2xl p-8 text-center">' +
                 '<div class="text-red-400 text-sm font-medium mb-2">Failed to load CT scan</div>' +
@@ -326,20 +351,13 @@
         }
         window.applyWindow = applyWindow;
 
-        // View mode
         window.setView = function(view) {
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + view)?.classList.add('active');
-            switch(view) {
-                case 'axial': nv.setSliceType(nv.sliceTypeAxial); break;
-                case 'coronal': nv.setSliceType(nv.sliceTypeCoronal); break;
-                case 'sagittal': nv.setSliceType(nv.sliceTypeSagittal); break;
-                case 'multi': nv.setSliceType(nv.sliceTypeMultiplanar); break;
-                case 'render': nv.setSliceType(nv.sliceTypeRender); break;
-            }
+            const types = { axial: nv.sliceTypeAxial, coronal: nv.sliceTypeCoronal, sagittal: nv.sliceTypeSagittal, multi: nv.sliceTypeMultiplanar, render: nv.sliceTypeRender };
+            nv.setSliceType(types[view] ?? nv.sliceTypeMultiplanar);
         };
 
-        // Presets
         window.setPreset = function(name) {
             const p = presets[name];
             if (!p) return;
@@ -348,14 +366,12 @@
             document.getElementById('preset-' + name)?.classList.add('active');
         };
 
-        // Colormap
         window.setColormap = function(name) {
             if (!nv.volumes.length) return;
             nv.volumes[0].colormap = name;
             nv.updateGLVolume();
         };
 
-        // Crosshair
         let crosshairOn = true;
         window.toggleCrosshair = function() {
             crosshairOn = !crosshairOn;
@@ -364,7 +380,6 @@
             document.getElementById('crosshair-toggle').textContent = crosshairOn ? 'On' : 'Off';
         };
 
-        // Sliders
         document.getElementById('ww-slider').addEventListener('input', function() {
             applyWindow(parseInt(this.value), parseInt(document.getElementById('wl-slider').value));
         });
@@ -382,70 +397,54 @@
             if (chevron) chevron.style.transform = panelState[name] ? 'rotate(180deg)' : '';
         };
 
-        // Toggle all panels visibility
         let panelsVisible = true;
         window.togglePanels = function() {
             panelsVisible = !panelsVisible;
             document.getElementById('panels-container').style.display = panelsVisible ? '' : 'none';
         };
 
-        // Segmentation overlay controls
-        const segVisible = {};
-        Object.keys(segColors).forEach(k => segVisible[k] = true);
+        // --- Segmentation label controls ---
 
-        // Toggle individual label visibility
+        function updateSegOverlay() {
+            if (nv.volumes.length < 2) return;
+            // Rebuild and re-register the custom colormap with updated alpha values
+            const lut = buildCustomCmapLUT();
+            const R = [], G = [], B = [], A = [];
+            for (let i = 0; i < 256; i++) {
+                R.push(lut[i*4]);
+                G.push(lut[i*4+1]);
+                B.push(lut[i*4+2]);
+                A.push(lut[i*4+3]);
+            }
+            nv.addColormap(cmapName, R, G, B, A);
+            nv.volumes[1].colormap = cmapName;
+            nv.updateGLVolume();
+        }
+
         window.toggleSegLabel = function(label) {
             segVisible[label] = !segVisible[label];
             updateSegOverlay();
-            // Update icon
-            const btn = document.querySelector(`.seg-toggle[data-seg="${label}"] i`);
-            if (btn) {
-                btn.className = segVisible[label] ? 'fas fa-eye text-gray-500 text-xs' : 'fas fa-eye-slash text-gray-600 text-xs';
-            }
+            const icon = document.querySelector('.seg-toggle[data-seg="' + label + '"] i');
+            if (icon) icon.className = segVisible[label] ? 'fas fa-eye text-gray-500 text-xs' : 'fas fa-eye-slash text-gray-600 text-xs';
         };
 
-        // Toggle all
         window.toggleAllSeg = function(show) {
-            Object.keys(segColors).forEach(k => {
+            Object.keys(labelDefs).forEach(k => {
                 segVisible[k] = show;
-                const btn = document.querySelector(`.seg-toggle[data-seg="${k}"] i`);
-                if (btn) btn.className = show ? 'fas fa-eye text-gray-500 text-xs' : 'fas fa-eye-slash text-gray-600 text-xs';
+                const icon = document.querySelector('.seg-toggle[data-seg="' + k + '"] i');
+                if (icon) icon.className = show ? 'fas fa-eye text-gray-500 text-xs' : 'fas fa-eye-slash text-gray-600 text-xs';
             });
             updateSegOverlay();
         };
 
-        function updateSegOverlay() {
-            if (nv.volumes.length < 2) return;
-            const seg = nv.volumes[1];
-            // Build colormapLabel array — needs entries up to max label (111)
-            const maxLabel = 112;
-            const cmap = [];
-            for (let i = 0; i < maxLabel; i++) {
-                cmap.push({ R: 0, G: 0, B: 0, A: 0 });
-            }
-            for (const [label, rgba] of Object.entries(segColors)) {
-                const idx = parseInt(label);
-                if (idx < maxLabel && segVisible[label]) {
-                    const slider = document.querySelector(`.seg-slider[data-seg="${label}"]`);
-                    const alpha = slider ? Math.round(parseInt(slider.value) * 2.55) : rgba[3];
-                    cmap[idx] = { R: rgba[0], G: rgba[1], B: rgba[2], A: alpha };
-                }
-            }
-            seg.colormapLabel = cmap;
-            nv.updateGLVolume();
-        }
-
-        // Bind seg toggle buttons
         document.querySelectorAll('.seg-toggle').forEach(btn => {
             btn.addEventListener('click', () => toggleSegLabel(btn.dataset.seg));
         });
-
-        // Bind seg opacity sliders
         document.querySelectorAll('.seg-slider').forEach(slider => {
             slider.addEventListener('input', () => updateSegOverlay());
         });
 
-        // Open seg panel by default if it exists
+        // Open seg panel by default
         setTimeout(() => {
             if (document.getElementById('seg-panel')) togglePanel('seg');
         }, 100);
