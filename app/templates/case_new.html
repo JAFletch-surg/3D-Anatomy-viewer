@@ -12,7 +12,7 @@
         <p class="text-gray-600 text-sm mt-1">Upload scan data and operative video for 3D reconstruction</p>
     </div>
 
-    <form action="{{ url_for('main.new_case') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+    <div id="create-form" class="space-y-6">
         <!-- Case Info -->
         <div class="bg-surface-700 border border-white/5 rounded-2xl p-6 space-y-5">
             <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
@@ -20,17 +20,17 @@
             </h2>
             <div>
                 <label class="block text-sm font-medium text-gray-400 mb-1.5">Case Title <span class="text-neon-400">*</span></label>
-                <input type="text" name="title" required placeholder="e.g. Pancreatic Mass - Whipple"
+                <input type="text" id="title" required placeholder="e.g. Pancreatic Mass - Whipple"
                        class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-700 text-sm focus:outline-none focus:border-neon-400/50 focus:ring-1 focus:ring-neon-400/20 transition-all">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-400 mb-1.5">Patient ID</label>
-                <input type="text" name="patient_id" placeholder="Optional identifier"
+                <input type="text" id="patient_id" placeholder="Optional identifier"
                        class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-700 text-sm focus:outline-none focus:border-neon-400/50 focus:ring-1 focus:ring-neon-400/20 transition-all">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-400 mb-1.5">Notes</label>
-                <textarea name="notes" rows="3" placeholder="Clinical notes, findings, operative plan..."
+                <textarea id="notes" rows="3" placeholder="Clinical notes, findings, operative plan..."
                           class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-700 text-sm focus:outline-none focus:border-neon-400/50 focus:ring-1 focus:ring-neon-400/20 transition-all resize-none"></textarea>
             </div>
         </div>
@@ -41,7 +41,7 @@
                 <i class="fas fa-brain mr-2 text-xs"></i>Segmentation Data
             </h2>
             <div id="scan-drop" class="relative border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
-                <input type="file" name="scan_file" id="scan-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
+                <input type="file" id="scan-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
                 <div id="scan-placeholder">
                     <div class="w-12 h-12 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
                         <i class="fas fa-cloud-upload-alt text-neon-400"></i>
@@ -53,9 +53,7 @@
                     <div class="flex items-center justify-center space-x-3">
                         <i class="fas fa-file-medical text-neon-400"></i>
                         <span id="scan-filename" class="text-white text-sm font-medium"></span>
-                        <button type="button" onclick="clearFile('scan')" class="text-gray-600 hover:text-red-400 transition-colors">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <button type="button" onclick="clearFile('scan')" class="text-gray-600 hover:text-red-400 transition-colors"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
             </div>
@@ -68,21 +66,19 @@
                 <span class="text-gray-700 text-xs font-normal normal-case tracking-normal ml-2">(optional)</span>
             </h2>
             <div id="ct-drop" class="relative border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
-                <input type="file" name="ct_file" id="ct-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
+                <input type="file" id="ct-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
                 <div id="ct-placeholder">
                     <div class="w-12 h-12 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
                         <i class="fas fa-x-ray text-neon-400"></i>
                     </div>
                     <p class="text-gray-400 text-sm font-medium">Drop CT scan file here or click to browse</p>
-                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz files — viewable in slice viewer</p>
+                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz files</p>
                 </div>
                 <div id="ct-selected" class="hidden">
                     <div class="flex items-center justify-center space-x-3">
                         <i class="fas fa-x-ray text-neon-400"></i>
                         <span id="ct-filename" class="text-white text-sm font-medium"></span>
-                        <button type="button" onclick="clearFile('ct')" class="text-gray-600 hover:text-red-400 transition-colors">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <button type="button" onclick="clearFile('ct')" class="text-gray-600 hover:text-red-400 transition-colors"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
             </div>
@@ -95,7 +91,7 @@
                 <span class="text-gray-700 text-xs font-normal normal-case tracking-normal ml-2">(optional)</span>
             </h2>
             <div id="video-drop" class="relative border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
-                <input type="file" name="video_file" id="video-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".mp4,.webm,.mov,.avi">
+                <input type="file" id="video-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".mp4,.webm,.mov,.avi">
                 <div id="video-placeholder">
                     <div class="w-12 h-12 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
                         <i class="fas fa-film text-neon-400"></i>
@@ -107,27 +103,37 @@
                     <div class="flex items-center justify-center space-x-3">
                         <i class="fas fa-film text-neon-400"></i>
                         <span id="video-filename" class="text-white text-sm font-medium"></span>
-                        <button type="button" onclick="clearFile('video')" class="text-gray-600 hover:text-red-400 transition-colors">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <button type="button" onclick="clearFile('video')" class="text-gray-600 hover:text-red-400 transition-colors"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <button type="submit"
+        <!-- Progress (hidden by default) -->
+        <div id="progress-section" class="hidden bg-surface-700 border border-white/5 rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span id="progress-label" class="text-gray-400 text-sm">Creating case...</span>
+                <span id="progress-pct" class="text-neon-400 text-sm font-mono">0%</span>
+            </div>
+            <div class="w-full bg-surface-800 rounded-full h-2">
+                <div id="progress-bar" class="bg-neon-400 h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <button id="submit-btn" onclick="createCase()"
                 class="w-full py-3.5 bg-neon-400 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-neon-400/30 transition-all text-sm">
             <i class="fas fa-plus mr-2"></i>Create Case
         </button>
-    </form>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/upload-gcs.js') }}"></script>
 <script>
+    // File input display
     function setupFileInput(type) {
-        const input = document.getElementById(type + '-input');
-        input.addEventListener('change', function() {
+        document.getElementById(type + '-input').addEventListener('change', function() {
             if (this.files[0]) {
                 document.getElementById(type + '-placeholder').classList.add('hidden');
                 document.getElementById(type + '-selected').classList.remove('hidden');
@@ -135,7 +141,6 @@
             }
         });
     }
-
     ['scan', 'ct', 'video'].forEach(setupFileInput);
 
     function clearFile(type) {
@@ -144,11 +149,98 @@
         document.getElementById(type + '-selected').classList.add('hidden');
     }
 
+    // Drag-drop styling
     ['scan-drop', 'ct-drop', 'video-drop'].forEach(id => {
         const el = document.getElementById(id);
         el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('border-neon-400/40', 'bg-neon-400/5'); });
         el.addEventListener('dragleave', e => { e.preventDefault(); el.classList.remove('border-neon-400/40', 'bg-neon-400/5'); });
         el.addEventListener('drop', () => el.classList.remove('border-neon-400/40', 'bg-neon-400/5'));
     });
+
+    // Main create flow: JSON case creation + signed URL file uploads
+    async function createCase() {
+        const title = document.getElementById('title').value.trim();
+        if (!title) { window.showError('Case title is required'); return; }
+
+        const btn = document.getElementById('submit-btn');
+        const progress = document.getElementById('progress-section');
+        const bar = document.getElementById('progress-bar');
+        const label = document.getElementById('progress-label');
+        const pct = document.getElementById('progress-pct');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+        progress.classList.remove('hidden');
+
+        function setProgress(percent, text) {
+            bar.style.width = percent + '%';
+            pct.textContent = percent + '%';
+            if (text) label.textContent = text;
+        }
+
+        try {
+            // Step 1: Create case (small JSON, no files)
+            setProgress(5, 'Creating case...');
+            const res = await fetch('/cases/new', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title,
+                    patient_id: document.getElementById('patient_id').value.trim(),
+                    notes: document.getElementById('notes').value.trim(),
+                })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Failed to create case');
+
+            const caseId = data.case_id;
+            setProgress(15, 'Case created');
+
+            // Step 2: Upload files via signed URLs
+            const scanFile = document.getElementById('scan-input').files[0];
+            const ctFile = document.getElementById('ct-input').files[0];
+            const videoFile = document.getElementById('video-input').files[0];
+
+            const totalFiles = [scanFile, ctFile, videoFile].filter(Boolean).length;
+            let filesUploaded = 0;
+
+            if (scanFile) {
+                setProgress(20, 'Uploading segmentation...');
+                await uploadFileToCase(scanFile, caseId, 'scan', (p) => {
+                    setProgress(20 + Math.round(p * 0.25), 'Uploading segmentation... ' + p + '%');
+                });
+                filesUploaded++;
+            }
+
+            if (ctFile) {
+                setProgress(50, 'Uploading CT scan...');
+                await uploadFileToCase(ctFile, caseId, 'ct', (p) => {
+                    setProgress(50 + Math.round(p * 0.25), 'Uploading CT scan... ' + p + '%');
+                });
+                filesUploaded++;
+            }
+
+            if (videoFile) {
+                setProgress(75, 'Uploading video...');
+                await uploadFileToCase(videoFile, caseId, 'video', (p) => {
+                    setProgress(75 + Math.round(p * 0.2), 'Uploading video... ' + p + '%');
+                });
+                filesUploaded++;
+            }
+
+            setProgress(100, 'Done! Redirecting...');
+            window.showSuccess('Case created' + (filesUploaded > 0 ? ' with ' + filesUploaded + ' file(s)' : ''));
+
+            setTimeout(() => {
+                window.location.href = '/cases/' + caseId;
+            }, 500);
+
+        } catch (e) {
+            window.showError(e.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-plus mr-2"></i>Create Case';
+            progress.classList.add('hidden');
+        }
+    }
 </script>
 {% endblock %}

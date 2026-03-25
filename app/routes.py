@@ -242,16 +242,27 @@ def new_case():
         if not user_id:
             return jsonify({'error': 'Session error'}), 400
 
-        title = request.form.get('title', '').strip()
-        patient_id = request.form.get('patient_id', '').strip()
-        notes = request.form.get('notes', '').strip()
+        # Accept both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+            title = data.get('title', '').strip()
+            patient_id = data.get('patient_id', '').strip()
+            notes = data.get('notes', '').strip()
+        else:
+            title = request.form.get('title', '').strip()
+            patient_id = request.form.get('patient_id', '').strip()
+            notes = request.form.get('notes', '').strip()
 
         if not title:
             return jsonify({'error': 'Case title is required'}), 400
 
         case_id = db.create_case(user_id, title, patient_id, notes)
 
-        # Handle segmentation file upload (direct/local — small files or no GCS)
+        # If JSON request, return case_id for JS upload flow
+        if request.is_json:
+            return jsonify({'success': True, 'case_id': case_id})
+
+        # Legacy form submit with files (for local dev / small files)
         if 'scan_file' in request.files:
             scan_file = request.files['scan_file']
             if scan_file.filename and allowed_nifti(scan_file.filename):
