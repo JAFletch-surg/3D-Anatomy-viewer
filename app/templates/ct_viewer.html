@@ -25,19 +25,28 @@
         .preset-btn.active { background: rgba(0,240,212,0.15); color: #00f0d4; border-color: rgba(0,240,212,0.3); }
 
         .panel-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-        .panel-content.open { max-height: 600px; }
+        .panel-content.open { max-height: 500px; }
 
-        .seg-item { background: rgba(255,255,255,0.02); border-radius: 8px; transition: all 0.2s; }
-        .seg-item:hover { background: rgba(0,240,212,0.05); }
+        .seg-item { background: rgba(255,255,255,0.02); border-radius: 6px; transition: all 0.15s; }
+        .seg-item:hover { background: rgba(0,240,212,0.04); }
 
-        .seg-slider { -webkit-appearance: none; appearance: none; width: 50px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; outline: none; }
+        .seg-slider { -webkit-appearance: none; appearance: none; width: 44px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; outline: none; }
         .seg-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: #00f0d4; cursor: pointer; border: 1.5px solid #000; }
         .seg-slider::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: #00f0d4; cursor: pointer; border: 1.5px solid #000; }
 
-        /* Mobile: view buttons scroll horizontally */
+        /* Right panel scrollable */
+        .right-panels {
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.05) transparent;
+        }
+        .right-panels::-webkit-scrollbar { width: 3px; }
+        .right-panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
         @media (max-width: 768px) {
             .view-buttons { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .right-panels { right: 0.5rem !important; left: 0.5rem !important; width: auto !important; }
+            .right-panels { right: 0.25rem !important; width: 200px !important; }
         }
     </style>
 </head>
@@ -68,7 +77,7 @@
     <canvas id="niivue-canvas"></canvas>
 
     <!-- Right Side Panels -->
-    <div id="panels-container" class="fixed top-14 right-2 z-40 space-y-2 right-panels" style="width: 220px;">
+    <div id="panels-container" class="fixed top-14 right-2 z-40 space-y-1.5 right-panels" style="width: 210px;">
 
         <!-- Windowing Panel (collapsible) -->
         <div class="glass rounded-2xl">
@@ -244,12 +253,6 @@
                     <div class="flex justify-between mb-0.5"><span class="text-gray-500 text-xs">Volume Opacity</span><span id="vol-opacity-val" class="text-[#00f0d4] text-xs font-mono">1.0</span></div>
                     <input type="range" id="vol-opacity" class="ct-slider" min="0" max="100" value="100">
                 </div>
-                <!-- Render quality -->
-                <div class="mb-3">
-                    <div class="flex justify-between mb-0.5"><span class="text-gray-500 text-xs">Quality</span><span id="render-quality-val" class="text-[#00f0d4] text-xs font-mono">1.0</span></div>
-                    <input type="range" id="render-quality" class="ct-slider" min="10" max="300" value="100">
-                </div>
-
                 <!-- Clipping planes -->
                 <div class="border-t border-white/5 pt-2 mb-2">
                     <label class="text-gray-500 text-xs mb-1.5 block">Clip Planes</label>
@@ -439,14 +442,26 @@
             applyWindow(parseInt(document.getElementById('ww-slider').value), parseInt(this.value));
         });
 
-        // Panel collapse
-        const panelState = { window: false, seg: true };
+        // Panel collapse — only one open at a time
+        const panelState = { window: false, seg: false, render: false };
         window.togglePanel = function(name) {
-            panelState[name] = !panelState[name];
-            const panel = document.getElementById(name + '-panel');
-            const chevron = document.getElementById(name + '-chevron');
-            if (panel) panel.classList.toggle('open', panelState[name]);
-            if (chevron) chevron.style.transform = panelState[name] ? 'rotate(180deg)' : '';
+            const wasOpen = panelState[name];
+            // Close all panels first
+            Object.keys(panelState).forEach(k => {
+                panelState[k] = false;
+                const p = document.getElementById(k + '-panel');
+                const c = document.getElementById(k + '-chevron');
+                if (p) p.classList.remove('open');
+                if (c) c.style.transform = '';
+            });
+            // Toggle the clicked one
+            if (!wasOpen) {
+                panelState[name] = true;
+                const panel = document.getElementById(name + '-panel');
+                const chevron = document.getElementById(name + '-chevron');
+                if (panel) panel.classList.add('open');
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            }
         };
 
         let panelsVisible = true;
@@ -496,25 +511,16 @@
             slider.addEventListener('input', () => updateSegOverlay());
         });
 
-        // Open seg panel by default
-        setTimeout(() => {
-            if (document.getElementById('seg-panel')) togglePanel('seg');
-        }, 100);
-
         // --- 3D Render controls ---
 
-        // Render modes: NiiVue volume render shaders
-        // 0=volume, 1=MIP (max intensity), 2=isosurface, 3=depth
         window.setRenderMode = function(mode) {
+            // NiiVue render modes via setVolumeRenderIllumination
             const modes = { volume: 0, mip: 1, iso: 2, depth: 3 };
-            const val = modes[mode] ?? 0;
-            nv.setVolumeRenderIllumination(val);
-            // Update active button
+            nv.setVolumeRenderIllumination(modes[mode] ?? 0);
             document.querySelectorAll('#render-panel .preset-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('rm-' + mode)?.classList.add('active');
         };
 
-        // Volume opacity
         document.getElementById('vol-opacity')?.addEventListener('input', function() {
             const val = parseFloat(this.value) / 100;
             document.getElementById('vol-opacity-val').textContent = val.toFixed(1);
@@ -524,76 +530,32 @@
             }
         });
 
-        // Render quality (ray march steps)
-        document.getElementById('render-quality')?.addEventListener('input', function() {
-            const val = parseFloat(this.value) / 100;
-            document.getElementById('render-quality-val').textContent = val.toFixed(1);
-            nv.setRenderAzimuthElevation(nv.scene.renderAzimuth, nv.scene.renderElevation);
-            nv.setVolumeRenderIllumination(nv.opts.volumeRenderIllumination || 0);
-        });
-
-        // Clipping planes
-        function updateClipPlane(axis, pct) {
-            // NiiVue clip planes use setClipPlane([x,y,z,depth])
-            // depth: 0 = no clip, negative = clip from one side
-            // We use azimuth vectors for each axis
-            if (pct >= 100) {
-                // No clipping on this axis
-                nv.setClipPlane([0, 0, 0, 0]);
-                return;
-            }
-            // Convert percentage to clip depth
-            // depth ranges roughly -1 to 1, where 0 = center
-            const depth = (pct / 100) * 2 - 1; // maps 0-100 to -1 to 1
-            const planes = {
-                z: [0, 0, 1, depth],   // Axial
-                y: [0, 1, 0, depth],   // Coronal
-                x: [1, 0, 0, depth],   // Sagittal
-            };
-            nv.setClipPlane(planes[axis] || [0, 0, 0, 0]);
+        // Clipping: NiiVue setClipPlane([x,y,z,depth]) — only one active at a time
+        function setClip(axis, pct) {
+            if (pct >= 100) { nv.setClipPlane([0, 0, 0, 0]); return; }
+            const depth = (pct / 100) * 2 - 1;
+            const planes = { z: [0,0,1,depth], y: [0,1,0,depth], x: [1,0,0,depth] };
+            nv.setClipPlane(planes[axis] || [0,0,0,0]);
         }
 
-        // Track which clip is active (only one at a time in NiiVue)
-        let activeClipAxis = null;
-
-        document.getElementById('clip-z')?.addEventListener('input', function() {
-            const pct = parseInt(this.value);
-            document.getElementById('clip-z-val').textContent = pct + '%';
-            activeClipAxis = 'z';
-            updateClipPlane('z', pct);
-            // Reset other sliders visually
-            document.getElementById('clip-y').value = 100;
-            document.getElementById('clip-y-val').textContent = '100%';
-            document.getElementById('clip-x').value = 100;
-            document.getElementById('clip-x-val').textContent = '100%';
-        });
-
-        document.getElementById('clip-y')?.addEventListener('input', function() {
-            const pct = parseInt(this.value);
-            document.getElementById('clip-y-val').textContent = pct + '%';
-            activeClipAxis = 'y';
-            updateClipPlane('y', pct);
-            document.getElementById('clip-z').value = 100;
-            document.getElementById('clip-z-val').textContent = '100%';
-            document.getElementById('clip-x').value = 100;
-            document.getElementById('clip-x-val').textContent = '100%';
-        });
-
-        document.getElementById('clip-x')?.addEventListener('input', function() {
-            const pct = parseInt(this.value);
-            document.getElementById('clip-x-val').textContent = pct + '%';
-            activeClipAxis = 'x';
-            updateClipPlane('x', pct);
-            document.getElementById('clip-z').value = 100;
-            document.getElementById('clip-z-val').textContent = '100%';
-            document.getElementById('clip-y').value = 100;
-            document.getElementById('clip-y-val').textContent = '100%';
+        ['x','y','z'].forEach(axis => {
+            const slider = document.getElementById('clip-' + axis);
+            if (!slider) return;
+            slider.addEventListener('input', function() {
+                const pct = parseInt(this.value);
+                document.getElementById('clip-' + axis + '-val').textContent = pct >= 100 ? '100%' : pct + '%';
+                setClip(axis, pct);
+                // Reset others since NiiVue only supports one clip plane
+                ['x','y','z'].filter(a => a !== axis).forEach(a => {
+                    document.getElementById('clip-' + a).value = 100;
+                    document.getElementById('clip-' + a + '-val').textContent = '100%';
+                });
+            });
         });
 
         window.resetClips = function() {
-            nv.setClipPlane([0, 0, 0, 0]);
-            activeClipAxis = null;
-            ['x', 'y', 'z'].forEach(a => {
+            nv.setClipPlane([0,0,0,0]);
+            ['x','y','z'].forEach(a => {
                 document.getElementById('clip-' + a).value = 100;
                 document.getElementById('clip-' + a + '-val').textContent = '100%';
             });
