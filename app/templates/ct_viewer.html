@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CME3D - CT Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .glass {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 240, 212, 0.08);
+        }
+        #niivue-canvas {
+            position: fixed;
+            top: 48px; left: 0;
+            width: 100vw;
+            height: calc(100vh - 48px);
+        }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <!-- Nav Bar -->
+    <div class="fixed top-0 left-0 right-0 glass z-50">
+        <div class="flex items-center justify-between p-3 px-5">
+            <a href="javascript:history.back()" class="flex items-center space-x-2 text-gray-500 hover:text-[#00f0d4] transition-colors text-sm">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                </svg>
+                <span class="font-medium">Back</span>
+            </a>
+            <div class="bg-white/5 rounded-lg px-3 py-1.5 border border-white/5">
+                <span class="text-gray-400 text-sm font-medium">CT Scan Viewer</span>
+            </div>
+            <!-- View mode buttons -->
+            <div class="flex items-center gap-1">
+                <button onclick="setView('axial')" class="px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] hover:bg-[#00f0d4]/10 rounded-lg transition-all">Axial</button>
+                <button onclick="setView('coronal')" class="px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] hover:bg-[#00f0d4]/10 rounded-lg transition-all">Coronal</button>
+                <button onclick="setView('sagittal')" class="px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] hover:bg-[#00f0d4]/10 rounded-lg transition-all">Sagittal</button>
+                <button onclick="setView('multi')" class="px-3 py-1 text-xs text-[#00f0d4] bg-[#00f0d4]/10 rounded-lg transition-all font-medium">Multi</button>
+                <button onclick="setView('render')" class="px-3 py-1 text-xs text-gray-400 hover:text-[#00f0d4] hover:bg-[#00f0d4]/10 rounded-lg transition-all">3D Render</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NiiVue Canvas -->
+    <canvas id="niivue-canvas"></canvas>
+
+    <!-- Loading -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black/90 flex items-center justify-center z-40">
+        <div class="glass rounded-2xl p-8 text-center">
+            <div class="w-10 h-10 border-2 border-[#00f0d4]/20 border-t-[#00f0d4] rounded-full mx-auto mb-5 animate-spin"></div>
+            <div class="text-white font-medium text-sm">Loading CT Scan</div>
+            <div class="text-gray-600 text-xs mt-2">This may take a moment...</div>
+        </div>
+    </div>
+
+    <!-- NiiVue from CDN -->
+    <script type="module">
+        import { Niivue } from "https://esm.sh/@niivue/niivue@0.44.1";
+
+        const nv = new Niivue({
+            backColor: [0, 0, 0, 1],
+            crosshairColor: [0, 0.94, 0.83, 0.5],
+            show3Dcrosshair: true,
+            multiplanarForceRender: true,
+        });
+
+        nv.attachToCanvas(document.getElementById("niivue-canvas"));
+
+        const ctUrl = "/static/uploads/{{ ct_filename }}";
+        nv.loadVolumes([{ url: ctUrl, colormap: "gray" }]).then(() => {
+            document.getElementById("loading-overlay").style.display = "none";
+            nv.setSliceType(nv.sliceTypeMultiplanar);
+        }).catch(err => {
+            console.error("Failed to load CT:", err);
+            document.getElementById("loading-overlay").innerHTML = `
+                <div class="glass rounded-2xl p-8 text-center">
+                    <div class="text-red-400 text-sm font-medium">Failed to load CT scan</div>
+                    <div class="text-gray-600 text-xs mt-2">${err.message || 'Unknown error'}</div>
+                    <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-[#00f0d4]/10 text-[#00f0d4] rounded-lg text-sm">Retry</button>
+                </div>
+            `;
+        });
+
+        // Expose for view buttons
+        window.setView = function(view) {
+            switch(view) {
+                case 'axial': nv.setSliceType(nv.sliceTypeAxial); break;
+                case 'coronal': nv.setSliceType(nv.sliceTypeCoronal); break;
+                case 'sagittal': nv.setSliceType(nv.sliceTypeSagittal); break;
+                case 'multi': nv.setSliceType(nv.sliceTypeMultiplanar); break;
+                case 'render': nv.setSliceType(nv.sliceTypeRender); break;
+            }
+        };
+    </script>
+</body>
+</html>

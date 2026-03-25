@@ -26,6 +26,7 @@ def init_db():
             notes TEXT DEFAULT '',
             nifti_filename TEXT DEFAULT '',
             glb_filename TEXT DEFAULT '',
+            ct_filename TEXT DEFAULT '',
             video_filename TEXT DEFAULT '',
             status TEXT DEFAULT 'pending',
             created_at TEXT NOT NULL,
@@ -35,7 +36,12 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_cases_user_id ON cases(user_id);
         CREATE INDEX IF NOT EXISTS idx_cases_created_at ON cases(created_at);
     ''')
-    conn.commit()
+    # Add ct_filename column if upgrading from old schema
+    try:
+        conn.execute('ALTER TABLE cases ADD COLUMN ct_filename TEXT DEFAULT ""')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     conn.close()
 
 

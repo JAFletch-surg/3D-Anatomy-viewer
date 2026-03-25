@@ -35,25 +35,52 @@
             </div>
         </div>
 
-        <!-- Scan Upload -->
+        <!-- Segmentation Upload -->
         <div class="bg-surface-700 border border-white/5 rounded-2xl p-6 space-y-4">
             <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
                 <i class="fas fa-brain mr-2 text-xs"></i>Segmentation Data
             </h2>
             <div id="scan-drop" class="relative border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
-                <input type="file" name="scan_file" id="scan-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz">
+                <input type="file" name="scan_file" id="scan-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
                 <div id="scan-placeholder">
                     <div class="w-12 h-12 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
                         <i class="fas fa-cloud-upload-alt text-neon-400"></i>
                     </div>
-                    <p class="text-gray-400 text-sm font-medium">Drop NIfTI file here or click to browse</p>
-                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz files supported</p>
+                    <p class="text-gray-400 text-sm font-medium">Drop segmentation file here or click to browse</p>
+                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz files</p>
                 </div>
                 <div id="scan-selected" class="hidden">
                     <div class="flex items-center justify-center space-x-3">
                         <i class="fas fa-file-medical text-neon-400"></i>
                         <span id="scan-filename" class="text-white text-sm font-medium"></span>
-                        <button type="button" onclick="clearScanFile()" class="text-gray-600 hover:text-red-400 transition-colors">
+                        <button type="button" onclick="clearFile('scan')" class="text-gray-600 hover:text-red-400 transition-colors">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CT Scan Upload -->
+        <div class="bg-surface-700 border border-white/5 rounded-2xl p-6 space-y-4">
+            <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
+                <i class="fas fa-x-ray mr-2 text-xs"></i>CT Scan
+                <span class="text-gray-700 text-xs font-normal normal-case tracking-normal ml-2">(optional)</span>
+            </h2>
+            <div id="ct-drop" class="relative border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
+                <input type="file" name="ct_file" id="ct-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz,.gz">
+                <div id="ct-placeholder">
+                    <div class="w-12 h-12 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
+                        <i class="fas fa-x-ray text-neon-400"></i>
+                    </div>
+                    <p class="text-gray-400 text-sm font-medium">Drop CT scan file here or click to browse</p>
+                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz files — viewable in slice viewer</p>
+                </div>
+                <div id="ct-selected" class="hidden">
+                    <div class="flex items-center justify-center space-x-3">
+                        <i class="fas fa-x-ray text-neon-400"></i>
+                        <span id="ct-filename" class="text-white text-sm font-medium"></span>
+                        <button type="button" onclick="clearFile('ct')" class="text-gray-600 hover:text-red-400 transition-colors">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -74,13 +101,13 @@
                         <i class="fas fa-film text-neon-400"></i>
                     </div>
                     <p class="text-gray-400 text-sm font-medium">Drop video file here or click to browse</p>
-                    <p class="text-gray-700 text-xs mt-1">MP4, WebM, MOV, AVI supported</p>
+                    <p class="text-gray-700 text-xs mt-1">MP4, WebM, MOV, AVI</p>
                 </div>
                 <div id="video-selected" class="hidden">
                     <div class="flex items-center justify-center space-x-3">
                         <i class="fas fa-film text-neon-400"></i>
                         <span id="video-filename" class="text-white text-sm font-medium"></span>
-                        <button type="button" onclick="clearVideoFile()" class="text-gray-600 hover:text-red-400 transition-colors">
+                        <button type="button" onclick="clearFile('video')" class="text-gray-600 hover:text-red-400 transition-colors">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -98,38 +125,26 @@
 
 {% block scripts %}
 <script>
-    const scanInput = document.getElementById('scan-input');
-    const videoInput = document.getElementById('video-input');
-
-    scanInput.addEventListener('change', function() {
-        if (this.files[0]) {
-            document.getElementById('scan-placeholder').classList.add('hidden');
-            document.getElementById('scan-selected').classList.remove('hidden');
-            document.getElementById('scan-filename').textContent = this.files[0].name;
-        }
-    });
-
-    videoInput.addEventListener('change', function() {
-        if (this.files[0]) {
-            document.getElementById('video-placeholder').classList.add('hidden');
-            document.getElementById('video-selected').classList.remove('hidden');
-            document.getElementById('video-filename').textContent = this.files[0].name;
-        }
-    });
-
-    function clearScanFile() {
-        scanInput.value = '';
-        document.getElementById('scan-placeholder').classList.remove('hidden');
-        document.getElementById('scan-selected').classList.add('hidden');
+    function setupFileInput(type) {
+        const input = document.getElementById(type + '-input');
+        input.addEventListener('change', function() {
+            if (this.files[0]) {
+                document.getElementById(type + '-placeholder').classList.add('hidden');
+                document.getElementById(type + '-selected').classList.remove('hidden');
+                document.getElementById(type + '-filename').textContent = this.files[0].name;
+            }
+        });
     }
 
-    function clearVideoFile() {
-        videoInput.value = '';
-        document.getElementById('video-placeholder').classList.remove('hidden');
-        document.getElementById('video-selected').classList.add('hidden');
+    ['scan', 'ct', 'video'].forEach(setupFileInput);
+
+    function clearFile(type) {
+        document.getElementById(type + '-input').value = '';
+        document.getElementById(type + '-placeholder').classList.remove('hidden');
+        document.getElementById(type + '-selected').classList.add('hidden');
     }
 
-    ['scan-drop', 'video-drop'].forEach(id => {
+    ['scan-drop', 'ct-drop', 'video-drop'].forEach(id => {
         const el = document.getElementById(id);
         el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('border-neon-400/40', 'bg-neon-400/5'); });
         el.addEventListener('dragleave', e => { e.preventDefault(); el.classList.remove('border-neon-400/40', 'bg-neon-400/5'); });
