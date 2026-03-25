@@ -136,7 +136,7 @@
         // Expose all functions globally immediately so onclick handlers work
         // (module scripts are deferred but onclick bindings need global access)
 
-        const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:true, multiplanarForceRender:true, isRadiologicalConvention:false });
+        const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:true, multiplanarForceRender:true, isRadiologicalConvention:true });
         nv.attachToCanvas(document.getElementById("gl"));
         window.nv = nv;
 
@@ -151,22 +151,21 @@
         const ctUrl = "/static/uploads/{{ ct_filename }}";
         const segUrl = "{{ seg_filename }}";
 
-        // Build seg colormap JSON in NiiVue's expected format:
-        // { R: [r0,r1,...,r111], G: [...], B: [...], labels: ["","","..."] }
+        // Build seg colormap using NiiVue's sparse I (index) format:
+        // { R:[...], G:[...], B:[...], I:[...], labels:[...] }
+        // I maps voxel intensity values to array positions — sparse, efficient
         function buildSegCmap() {
-            const maxIdx = 112;
-            const R = new Array(maxIdx).fill(0);
-            const G = new Array(maxIdx).fill(0);
-            const B = new Array(maxIdx).fill(0);
-            const labels = new Array(maxIdx).fill("");
+            const R = [0], G = [0], B = [0], I = [0], labels = [""];
             for (const [lbl, rgb] of Object.entries(LC)) {
-                const i = parseInt(lbl);
-                if (i < maxIdx && segOn[lbl]) {
-                    R[i] = rgb[0]; G[i] = rgb[1]; B[i] = rgb[2];
-                    labels[i] = LABEL_NAMES[lbl] || "";
+                I.push(parseInt(lbl));
+                if (segOn[lbl]) {
+                    R.push(rgb[0]); G.push(rgb[1]); B.push(rgb[2]);
+                } else {
+                    R.push(0); G.push(0); B.push(0);
                 }
+                labels.push(LABEL_NAMES[lbl] || "");
             }
-            return { R, G, B, labels };
+            return { R, G, B, I, labels };
         }
 
         // Load CT first, then add seg overlay
