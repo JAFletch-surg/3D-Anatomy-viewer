@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.localClippingEnabled = true;
             
             
             renderer.outputEncoding = THREE.sRGBEncoding;
@@ -908,6 +909,72 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('3D viewer resources cleaned up');
     });
 
+    // ===== CLIPPING PLANES =====
+
+    const clipPlanes = {
+        x: new THREE.Plane(new THREE.Vector3(-1, 0, 0), 100),
+        y: new THREE.Plane(new THREE.Vector3(0, -1, 0), 100),
+        z: new THREE.Plane(new THREE.Vector3(0, 0, -1), 100),
+    };
+
+    const activeClipPlanes = [];
+
+    function setClipPlane(axis, value) {
+        // value: -100 to 100, where 100 = no clip, -100 = fully clipped
+        const plane = clipPlanes[axis];
+        if (!plane) return;
+
+        if (value >= 100) {
+            // Remove this clip plane
+            const idx = activeClipPlanes.indexOf(plane);
+            if (idx >= 0) activeClipPlanes.splice(idx, 1);
+        } else {
+            // Set the clip position: map -100..100 to actual scene units
+            const clipPos = (value / 100) * 1.5; // 1.5 = scene extent
+            plane.constant = clipPos;
+
+            // Add if not already active
+            if (!activeClipPlanes.includes(plane)) {
+                activeClipPlanes.push(plane);
+            }
+        }
+
+        // Apply clip planes to all mesh materials
+        Object.values(modelNodes).forEach(node => {
+            if (node.material) {
+                node.material.clippingPlanes = activeClipPlanes.length > 0 ? activeClipPlanes : [];
+                node.material.clipShadows = true;
+                node.material.needsUpdate = true;
+            }
+        });
+    }
+
+    function resetClips() {
+        activeClipPlanes.length = 0;
+        Object.values(modelNodes).forEach(node => {
+            if (node.material) {
+                node.material.clippingPlanes = [];
+                node.material.needsUpdate = true;
+            }
+        });
+    }
+
+    // Bind clip sliders from the HTML
+    function setupClipSliders() {
+        ['x', 'y', 'z'].forEach(axis => {
+            const slider = document.getElementById('clip3d-' + axis);
+            const label = document.getElementById('clip3d-' + axis + '-val');
+            if (slider) {
+                slider.addEventListener('input', function() {
+                    const val = parseInt(this.value);
+                    label.textContent = val >= 100 ? 'Off' : val + '%';
+                    setClipPlane(axis, val);
+                });
+            }
+        });
+    }
+    setupClipSliders();
+
     // Export some functions for external access
     window.viewer3D = {
         resetCamera: resetCameraView,
@@ -916,7 +983,9 @@ document.addEventListener('DOMContentLoaded', function() {
         showAllParts: showAllParts,
         hideAllParts: hideAllParts,
         getStats: () => renderStats,
-        setPartOpacity: setPartOpacity
+        setPartOpacity: setPartOpacity,
+        setClipPlane: setClipPlane,
+        resetClips: resetClips
     };
 
     console.log('Medical 3D Viewer script loaded successfully');
