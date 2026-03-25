@@ -233,7 +233,7 @@
     </div>
 
     <script type="module">
-        import { Niivue } from "https://esm.sh/@niivue/niivue@0.44.1";
+        import { Niivue, NVImage } from "https://esm.sh/@niivue/niivue@0.44.1";
 
         const nv = new Niivue({
             backColor: [0, 0, 0, 1],
@@ -247,30 +247,13 @@
 
         // Segmentation label colours matching 3D viewer (R,G,B,A 0-255)
         const segColors = {
-            5:   [220, 20,  60,  180], // Artery - Crimson
-            6:   [65,  105, 225, 180], // Vein - Royal Blue
-            10:  [255, 20,  147, 180], // Stomach - Deep Pink
-            50:  [205, 133, 63,  180], // Colon - Peru
-            61:  [255, 179, 71,  180], // Pancreas - Sandy
-            111: [50,  205, 50,  180], // Tumor - Lime Green
+            5:   [220, 20,  60,  180], // Artery
+            6:   [65,  105, 225, 180], // Vein
+            10:  [255, 20,  147, 180], // Stomach
+            50:  [205, 133, 63,  180], // Colon
+            61:  [255, 179, 71,  180], // Pancreas
+            111: [50,  205, 50,  180], // Tumor
         };
-
-        // Build a colormap LUT for the segmentation overlay
-        // NiiVue uses a 256-entry RGBA colormap; we map label values to colours
-        function buildSegColormap() {
-            const lut = new Uint8Array(256 * 4);
-            // Index 0 = transparent (background)
-            for (const [label, rgba] of Object.entries(segColors)) {
-                const idx = parseInt(label);
-                if (idx < 256) {
-                    lut[idx * 4]     = rgba[0];
-                    lut[idx * 4 + 1] = rgba[1];
-                    lut[idx * 4 + 2] = rgba[2];
-                    lut[idx * 4 + 3] = rgba[3];
-                }
-            }
-            return lut;
-        }
 
         const presets = {
             abdomen:  { ww: 400,  wl: 40 },
@@ -284,37 +267,45 @@
         const ctUrl = "/static/uploads/{{ ct_filename }}";
         const segUrl = "{{ seg_filename }}";
 
-        // Load volumes
+        // Build the volume list — CT first, then segmentation overlay
         const volumes = [{ url: ctUrl, colormap: "gray" }];
+        if (segUrl) {
+            volumes.push({
+                url: "/static/uploads/" + segUrl,
+                opacity: 0.7,
+                colormap: "actc",
+                colormapLabel: buildSegColormapLabel(),
+            });
+        }
 
+        // Build a NiiVue colormap label table for the segmentation
+        // This is an array of {r,g,b,a} objects indexed by label value
+        function buildSegColormapLabel() {
+            // Create entries: array of objects with R,G,B,A (0-255)
+            // We need enough entries to cover label 111
+            const maxLabel = 112;
+            const cmap = new Array(maxLabel);
+            // All transparent by default
+            for (let i = 0; i < maxLabel; i++) {
+                cmap[i] = { R: 0, G: 0, B: 0, A: 0 };
+            }
+            for (const [label, rgba] of Object.entries(segColors)) {
+                const idx = parseInt(label);
+                if (idx < maxLabel) {
+                    cmap[idx] = { R: rgba[0], G: rgba[1], B: rgba[2], A: rgba[3] };
+                }
+            }
+            return cmap;
+        }
+
+        // Load all volumes in a single call
         nv.loadVolumes(volumes).then(() => {
             applyWindow(400, 40);
             nv.setSliceType(nv.sliceTypeMultiplanar);
-
-            // Load segmentation overlay if available
-            if (segUrl) {
-                nv.loadVolumes([{ url: "/static/uploads/" + segUrl, opacity: 0.7, colormap: "actc" }]).then(() => {
-                    // Apply custom colormap to segmentation
-                    if (nv.volumes.length > 1) {
-                        const seg = nv.volumes[1];
-                        seg.cal_min = 0;
-                        seg.cal_max = 255;
-                        seg.colormapLabel = nv.colormapFromKey("actc");
-                        // Override with our custom LUT
-                        const lut = buildSegColormap();
-                        seg.setColormapLabel(lut);
-                        nv.updateGLVolume();
-                    }
-                    document.getElementById("loading-overlay").style.display = "none";
-                }).catch(err => {
-                    console.warn("Segmentation overlay failed:", err);
-                    document.getElementById("loading-overlay").style.display = "none";
-                });
-            } else {
-                document.getElementById("loading-overlay").style.display = "none";
-            }
+            document.getElementById("loading-overlay").style.display = "none";
+            console.log("Loaded volumes:", nv.volumes.length);
         }).catch(err => {
-            console.error("Failed to load CT:", err);
+            console.error("Failed to load:", err);
             document.getElementById("loading-overlay").innerHTML =
                 '<div class="glass rounded-2xl p-8 text-center">' +
                 '<div class="text-red-400 text-sm font-medium mb-2">Failed to load CT scan</div>' +
@@ -426,19 +417,21 @@
         function updateSegOverlay() {
             if (nv.volumes.length < 2) return;
             const seg = nv.volumes[1];
-            const lut = new Uint8Array(256 * 4);
+            // Build colormapLabel array — needs entries up to max label (111)
+            const maxLabel = 112;
+            const cmap = [];
+            for (let i = 0; i < maxLabel; i++) {
+                cmap.push({ R: 0, G: 0, B: 0, A: 0 });
+            }
             for (const [label, rgba] of Object.entries(segColors)) {
                 const idx = parseInt(label);
-                if (idx < 256 && segVisible[label]) {
+                if (idx < maxLabel && segVisible[label]) {
                     const slider = document.querySelector(`.seg-slider[data-seg="${label}"]`);
                     const alpha = slider ? Math.round(parseInt(slider.value) * 2.55) : rgba[3];
-                    lut[idx * 4]     = rgba[0];
-                    lut[idx * 4 + 1] = rgba[1];
-                    lut[idx * 4 + 2] = rgba[2];
-                    lut[idx * 4 + 3] = alpha;
+                    cmap[idx] = { R: rgba[0], G: rgba[1], B: rgba[2], A: alpha };
                 }
             }
-            seg.setColormapLabel(lut);
+            seg.colormapLabel = cmap;
             nv.updateGLVolume();
         }
 
