@@ -58,13 +58,13 @@
 
         <!-- Slice view buttons -->
         <div class="flex gap-0.5 shrink-0">
-            <button onclick="sv('axial')" id="v-axial" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Ax</button>
-            <button onclick="sv('coronal')" id="v-coronal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Cor</button>
-            <button onclick="sv('sagittal')" id="v-sagittal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Sag</button>
-            <button onclick="sv('multi')" id="v-multi" class="view-btn on px-2 py-1 text-xs rounded-md">Multi</button>
-            <button onclick="sv('render')" id="v-render" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">3D</button>
+            <button data-view="axial" id="v-axial" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Ax</button>
+            <button data-view="coronal" id="v-coronal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Cor</button>
+            <button data-view="sagittal" id="v-sagittal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Sag</button>
+            <button data-view="multi" id="v-multi" class="view-btn on px-2 py-1 text-xs rounded-md">Multi</button>
+            <button data-view="render" id="v-render" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">3D</button>
         </div>
-        <button onclick="document.getElementById('ctrl').classList.toggle('hidden')" class="text-gray-500 hover:text-[#00f0d4] text-sm shrink-0"><i class="fas fa-sliders-h"></i></button>
+        <button id="toggle-ctrl" class="text-gray-500 hover:text-[#00f0d4] text-sm shrink-0"><i class="fas fa-sliders-h"></i></button>
     </div>
 
     <canvas id="gl"></canvas>
@@ -73,18 +73,18 @@
     <div id="ctrl" class="bg-black/80 backdrop-blur-xl rounded-xl border border-white/5">
         <!-- Window -->
         <div class="section">
-            <div class="section-head" onclick="tog(this)">
+            <div class="section-head">
                 <span class="text-[#00f0d4] text-xs font-semibold uppercase tracking-wider"><i class="fas fa-adjust mr-1"></i>Window</span>
                 <i class="fas fa-chevron-right text-gray-700 text-xs tr"></i>
             </div>
             <div class="section-body">
-                <div class="grid grid-cols-3 gap-1 mb-2">
-                    <button class="pbtn on" onclick="wp('abdomen',this)">Abdomen</button>
-                    <button class="pbtn" onclick="wp('lung',this)">Lung</button>
-                    <button class="pbtn" onclick="wp('bone',this)">Bone</button>
-                    <button class="pbtn" onclick="wp('brain',this)">Brain</button>
-                    <button class="pbtn" onclick="wp('liver',this)">Liver</button>
-                    <button class="pbtn" onclick="wp('vascular',this)">Vascular</button>
+                <div class="grid grid-cols-3 gap-1 mb-2" id="presets">
+                    <button class="pbtn on" data-wp="abdomen">Abdomen</button>
+                    <button class="pbtn" data-wp="lung">Lung</button>
+                    <button class="pbtn" data-wp="bone">Bone</button>
+                    <button class="pbtn" data-wp="brain">Brain</button>
+                    <button class="pbtn" data-wp="liver">Liver</button>
+                    <button class="pbtn" data-wp="vascular">Vascular</button>
                 </div>
                 <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-7">WW</span><input type="range" class="sl flex-1" id="ww" min="1" max="4000" value="400"><span id="wwv" class="text-[#00f0d4] text-xs font-mono w-8 text-right">400</span></div>
                 <div class="flex items-center gap-2"><span class="text-gray-600 text-xs w-7">WL</span><input type="range" class="sl flex-1" id="wl" min="-1000" max="3000" value="40"><span id="wlv" class="text-[#00f0d4] text-xs font-mono w-8 text-right">40</span></div>
@@ -93,7 +93,7 @@
         <!-- Segmentation -->
         {% if seg_filename %}
         <div class="section">
-            <div class="section-head" onclick="tog(this)">
+            <div class="section-head">
                 <span class="text-[#00f0d4] text-xs font-semibold uppercase tracking-wider"><i class="fas fa-layer-group mr-1"></i>Labels</span>
                 <i class="fas fa-chevron-right text-gray-700 text-xs tr"></i>
             </div>
@@ -106,13 +106,13 @@
                     <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#FFB347"></div><span class="text-gray-300 text-xs">Pancreas</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="61"><button data-s="61" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
                     <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#32CD32"></div><span class="text-gray-300 text-xs">Tumor</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="111"><button data-s="111" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
                 </div>
-                <div class="flex gap-1 mt-2"><button onclick="allSeg(1)" class="pbtn on flex-1">Show All</button><button onclick="allSeg(0)" class="pbtn flex-1">Hide All</button></div>
+                <div class="flex gap-1 mt-2"><button id="seg-show-all" class="pbtn on flex-1">Show All</button><button id="seg-hide-all" class="pbtn flex-1">Hide All</button></div>
             </div>
         </div>
         {% endif %}
         <!-- 3D / Clip -->
         <div class="section">
-            <div class="section-head" onclick="tog(this)">
+            <div class="section-head">
                 <span class="text-[#00f0d4] text-xs font-semibold uppercase tracking-wider"><i class="fas fa-cut mr-1"></i>Clip</span>
                 <i class="fas fa-chevron-right text-gray-700 text-xs tr"></i>
             </div>
@@ -120,7 +120,7 @@
                 <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-6">Z</span><input type="range" class="sl flex-1" id="cz" min="0" max="100" value="100"><span id="czv" class="text-gray-500 text-xs w-7 text-right">Off</span></div>
                 <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-6">Y</span><input type="range" class="sl flex-1" id="cy" min="0" max="100" value="100"><span id="cyv" class="text-gray-500 text-xs w-7 text-right">Off</span></div>
                 <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-6">X</span><input type="range" class="sl flex-1" id="cx" min="0" max="100" value="100"><span id="cxv" class="text-gray-500 text-xs w-7 text-right">Off</span></div>
-                <button onclick="resetClip()" class="pbtn w-full mt-1">Reset</button>
+                <button id="reset-clip" class="pbtn w-full mt-1">Reset</button>
             </div>
         </div>
     </div>
@@ -132,6 +132,9 @@
 
     <script type="module">
         import { Niivue } from "https://esm.sh/@niivue/niivue@0.44.1";
+
+        // Expose all functions globally immediately so onclick handlers work
+        // (module scripts are deferred but onclick bindings need global access)
 
         const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:true, multiplanarForceRender:true });
         nv.attachToCanvas(document.getElementById("gl"));
@@ -185,57 +188,72 @@
             nv.updateGLVolume();
         }
 
-        // Windowing
+        // Windowing — use NiiVue's setVolume API for reliable updates
         function setWin(ww, wl) {
             if (!nv.volumes.length) return;
-            nv.volumes[0].cal_min = wl - ww/2;
-            nv.volumes[0].cal_max = wl + ww/2;
+            const v = nv.volumes[0];
+            v.cal_min = wl - ww/2;
+            v.cal_max = wl + ww/2;
+            nv.refreshLayers(v, 0);
             nv.updateGLVolume();
             document.getElementById('ww').value = ww;
             document.getElementById('wl').value = wl;
             document.getElementById('wwv').textContent = ww;
             document.getElementById('wlv').textContent = wl;
         }
-        document.getElementById('ww').oninput = function(){ const w=+this.value; document.getElementById('wwv').textContent=w; setWin(w, +document.getElementById('wl').value); };
-        document.getElementById('wl').oninput = function(){ const l=+this.value; document.getElementById('wlv').textContent=l; setWin(+document.getElementById('ww').value, l); };
+        document.getElementById('ww').addEventListener('input', function(){ const w=+this.value; document.getElementById('wwv').textContent=w; setWin(w, +document.getElementById('wl').value); });
+        document.getElementById('wl').addEventListener('input', function(){ const l=+this.value; document.getElementById('wlv').textContent=l; setWin(+document.getElementById('ww').value, l); });
 
-        // View switcher
-        window.sv = function(v) {
-            document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('on'));
-            document.getElementById('v-'+v)?.classList.add('on');
-            const m = {axial:nv.sliceTypeAxial, coronal:nv.sliceTypeCoronal, sagittal:nv.sliceTypeSagittal, multi:nv.sliceTypeMultiplanar, render:nv.sliceTypeRender};
-            nv.setSliceType(m[v]??nv.sliceTypeMultiplanar);
-        };
+        // View switcher — bind via JS
+        document.querySelectorAll('[data-view]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const v = this.dataset.view;
+                document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('on'));
+                this.classList.add('on');
+                const m = {axial:nv.sliceTypeAxial, coronal:nv.sliceTypeCoronal, sagittal:nv.sliceTypeSagittal, multi:nv.sliceTypeMultiplanar, render:nv.sliceTypeRender};
+                nv.setSliceType(m[v]??nv.sliceTypeMultiplanar);
+            });
+        });
 
-        // Window presets
-        window.wp = function(name, el) {
-            const p = WP[name]; if(!p) return;
-            setWin(p[0], p[1]);
-            el.parentElement.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on'));
-            el.classList.add('on');
-        };
+        // Toggle control panel
+        document.getElementById('toggle-ctrl')?.addEventListener('click', () => {
+            document.getElementById('ctrl').classList.toggle('hidden');
+        });
 
-        // Section accordion
-        window.tog = function(head) {
-            const body = head.nextElementSibling;
-            const arrow = head.querySelector('.tr');
-            const wasOpen = body.classList.contains('show');
-            // Close all
-            document.querySelectorAll('.section-body').forEach(b=>b.classList.remove('show'));
-            document.querySelectorAll('.tr').forEach(a=>a.style.transform='');
-            // Toggle clicked
-            if (!wasOpen) { body.classList.add('show'); if(arrow) arrow.style.transform='rotate(90deg)'; }
-        };
+        // Window presets — bind via JS
+        document.querySelectorAll('[data-wp]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const name = this.dataset.wp;
+                const p = WP[name]; if(!p) return;
+                setWin(p[0], p[1]);
+                document.querySelectorAll('[data-wp]').forEach(b=>b.classList.remove('on'));
+                this.classList.add('on');
+            });
+        });
 
-        // Seg controls
-        window.allSeg = function(show) {
+        // Section accordion — bind via JS
+        document.querySelectorAll('.section-head').forEach(head => {
+            head.addEventListener('click', function() {
+                const body = this.nextElementSibling;
+                const arrow = this.querySelector('.tr');
+                const wasOpen = body.classList.contains('show');
+                document.querySelectorAll('.section-body').forEach(b=>b.classList.remove('show'));
+                document.querySelectorAll('.tr').forEach(a=>a.style.transform='');
+                if (!wasOpen) { body.classList.add('show'); if(arrow) arrow.style.transform='rotate(90deg)'; }
+            });
+        });
+
+        // Seg show/hide all — bind via JS
+        function allSeg(show) {
             Object.keys(LC).forEach(k => {
                 segOn[k] = !!show;
                 const btn = document.querySelector('.seg-eye[data-s="'+k+'"]');
                 if(btn) btn.innerHTML = show ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
             });
             applySeg();
-        };
+        }
+        document.getElementById('seg-show-all')?.addEventListener('click', () => allSeg(1));
+        document.getElementById('seg-hide-all')?.addEventListener('click', () => allSeg(0));
         document.querySelectorAll('.seg-eye').forEach(btn => {
             btn.onclick = function() {
                 const k = this.dataset.s;
@@ -265,7 +283,8 @@
                 ['x','y','z'].filter(b=>b!==a).forEach(b=>{ document.getElementById('c'+b).value=100; document.getElementById('c'+b+'v').textContent='Off'; });
             };
         });
-        window.resetClip = function() { nv.setClipPlane([0,0,0,0]); ['x','y','z'].forEach(a=>{document.getElementById('c'+a).value=100;document.getElementById('c'+a+'v').textContent='Off';}); };
+        function resetClip() { nv.setClipPlane([0,0,0,0]); ['x','y','z'].forEach(a=>{document.getElementById('c'+a).value=100;document.getElementById('c'+a+'v').textContent='Off';}); }
+        document.getElementById('reset-clip')?.addEventListener('click', resetClip);
 
         // Crosshair toggle via keyboard
         document.addEventListener('keydown', e => { if(e.key==='c') { nv.opts.crosshairWidth = nv.opts.crosshairWidth ? 0 : 1; nv.updateGLVolume(); }});
