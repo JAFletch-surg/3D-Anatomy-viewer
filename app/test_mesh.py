@@ -116,8 +116,11 @@ def extract_transformed_mesh(filepath):
                 
             if len(mesh.faces) > 1000:
                 logger.info(f"Decimating label_{label} from {len(mesh.faces)} to {target_faces} faces")
-                mesh = mesh.simplify_quadric_decimation(target_faces)
-                logger.info(f"Faces after decimation: {len(mesh.faces)}")
+                try:
+                    mesh = mesh.simplify_quadric_decimation(target_faces)
+                    logger.info(f"Faces after decimation: {len(mesh.faces)}")
+                except Exception as e:
+                    logger.warning(f"Quadric decimation failed for label_{label}: {e}, skipping decimation")
             
             # Apply smoothing
             iterations = 10 if label in [1, 2] else 20
