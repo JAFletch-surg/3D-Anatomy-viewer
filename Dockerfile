@@ -31,7 +31,10 @@ EXPOSE 8080
 # Set environment variables
 ENV FLASK_APP=run.py
 ENV PYTHONPATH=/app
+ENV UPLOAD_FOLDER=/app/app/static/uploads
 ENV PORT=8080
+# GCS_BUCKET is set at deploy time via Cloud Run env vars
+# When not set, the app uses local storage (for dev)
 
 # Command to run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "300", "--workers", "1", "--access-logfile", "-", "--error-logfile", "-", "run:app"]

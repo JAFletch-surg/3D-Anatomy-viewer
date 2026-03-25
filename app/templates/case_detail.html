@@ -205,35 +205,29 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/upload-gcs.js') }}"></script>
 <script>
     const caseId = "{{ case.id }}";
 
-    async function uploadFile(url, fieldName, file) {
-        const formData = new FormData();
-        formData.append(fieldName, file);
-        const res = await fetch(url, { method: 'POST', body: formData });
-        return await res.json();
-    }
-
-    function bindUpload(inputId, url, fieldName, successMsg) {
+    function bindUpload(inputId, fileType, successMsg) {
         const el = document.getElementById(inputId);
         if (!el) return;
         el.addEventListener('change', async function() {
             if (!this.files[0]) return;
             try {
-                const data = await uploadFile(url, fieldName, this.files[0]);
+                const data = await uploadFileToCase(this.files[0], caseId, fileType);
                 if (data.success) { window.showSuccess(successMsg); setTimeout(() => location.reload(), 1500); }
                 else window.showError(data.error || 'Upload failed');
             } catch (e) { window.showError('Upload failed: ' + e.message); }
         });
     }
 
-    bindUpload('scan-upload', '/cases/' + caseId + '/upload-scan', 'scan_file', 'Segmentation uploaded');
-    bindUpload('rescan-input', '/cases/' + caseId + '/upload-scan', 'scan_file', 'Scan re-uploaded');
-    bindUpload('ct-upload', '/cases/' + caseId + '/upload-ct', 'ct_file', 'CT scan uploaded');
-    bindUpload('replace-ct', '/cases/' + caseId + '/upload-ct', 'ct_file', 'CT scan replaced');
-    bindUpload('video-upload', '/cases/' + caseId + '/upload-video', 'video_file', 'Video uploaded');
-    bindUpload('replace-video', '/cases/' + caseId + '/upload-video', 'video_file', 'Video replaced');
+    bindUpload('scan-upload', 'scan', 'Segmentation uploaded');
+    bindUpload('rescan-input', 'scan', 'Scan re-uploaded');
+    bindUpload('ct-upload', 'ct', 'CT scan uploaded');
+    bindUpload('replace-ct', 'ct', 'CT scan replaced');
+    bindUpload('video-upload', 'video', 'Video uploaded');
+    bindUpload('replace-video', 'video', 'Video replaced');
 
     {% if case.status == 'processing' and case.nifti_filename %}
     (function pollStatus() {

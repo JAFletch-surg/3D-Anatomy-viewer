@@ -7,3 +7,4 @@ Werkzeug==3.0.1
 open3d==0.18.0
 gunicorn==21.2.0
 fast-simplification==0.1.7
+google-cloud-storage==2.14.0
