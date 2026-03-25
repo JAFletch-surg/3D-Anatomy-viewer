@@ -52,8 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             
             renderer.outputEncoding = THREE.sRGBEncoding;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.2; 
+            renderer.toneMapping = THREE.LinearToneMapping;
+            renderer.toneMappingExposure = 1.0; 
 
             // OrbitControls setup
             controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -94,48 +94,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupMedicalLighting() {
-        // Hemisphere light: warm from above, cool from below — natural tissue look
-        const hemi = new THREE.HemisphereLight(0xffeedd, 0x223344, 0.6);
-        scene.add(hemi);
-
-        // Key light: warm, strong, casts shadows
-        const keyLight = new THREE.DirectionalLight(0xfff5ee, 0.8);
-        keyLight.position.set(8, 10, 6);
+        const keyLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        keyLight.position.set(10, 12, 8);
         keyLight.castShadow = true;
-        keyLight.shadow.mapSize.width = 2048;
-        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.mapSize.width = 4048;
+        keyLight.shadow.mapSize.height = 4048;
         keyLight.shadow.camera.near = 0.5;
-        keyLight.shadow.camera.far = 30;
-        keyLight.shadow.camera.left = -5;
-        keyLight.shadow.camera.right = 5;
-        keyLight.shadow.camera.top = 5;
-        keyLight.shadow.camera.bottom = -5;
-        keyLight.shadow.bias = -0.003;
+        keyLight.shadow.camera.far = 50;
+        keyLight.shadow.camera.left = -10;
+        keyLight.shadow.camera.right = 10;
+        keyLight.shadow.camera.top = 10;
+        keyLight.shadow.camera.bottom = -10;
+        keyLight.shadow.bias = -0.005;
         keyLight.shadow.normalBias = 0.02;
         scene.add(keyLight);
 
-        // Fill light: cool blue, softer — simulates surgical theatre fill
-        const fillLight = new THREE.DirectionalLight(0xd0e8ff, 0.4);
-        fillLight.position.set(-6, 5, 4);
+        const fillLight = new THREE.DirectionalLight(0xe8f4fd, 0.4);
+        fillLight.position.set(-8, 6, 5);
         scene.add(fillLight);
 
-        // Rim light: back-edge definition
-        const rimLight = new THREE.DirectionalLight(0xfff0e0, 0.6);
-        rimLight.position.set(2, 6, -10);
+        const rimLight = new THREE.DirectionalLight(0xfff8f0, 0.7);
+        rimLight.position.set(2, 8, -12);
         scene.add(rimLight);
 
-        // Bottom fill: prevents totally dark undersides
-        const bottomLight = new THREE.DirectionalLight(0xe0e8ff, 0.15);
-        bottomLight.position.set(0, -6, 2);
+        const bottomLight = new THREE.DirectionalLight(0xf0f8ff, 0.03);
+        bottomLight.position.set(0, -8, 3);
         scene.add(bottomLight);
 
-        // Side lights for complete coverage
-        const sideLight1 = new THREE.DirectionalLight(0xffffff, 0.3);
-        sideLight1.position.set(12, 2, 0);
+        const ambientLight = new THREE.AmbientLight(0xf5f8ff, 0.3);
+        scene.add(ambientLight);
+
+        const sideLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
+        sideLight1.position.set(15, 0, 0);
         scene.add(sideLight1);
 
-        const sideLight2 = new THREE.DirectionalLight(0xffffff, 0.15);
-        sideLight2.position.set(-12, 2, 0);
+        const sideLight2 = new THREE.DirectionalLight(0xffffff, 0.2);
+        sideLight2.position.set(-15, 0, 0);
         scene.add(sideLight2);
     }
 
@@ -216,9 +210,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     node.material.dispose();
                 }
 
-                // Physically-based organ material
+                // Enhanced material for medical visualization
                 const materialColor = getMaterialColor(node.name);
-                node.material = createOrganMaterial(node.name);
+                node.material = new THREE.MeshStandardMaterial({
+                    color: materialColor,
+                    roughness: 0.2,
+                    metalness: 0.0,
+                    transparent: true,
+                    opacity: 1.0,
+                    side: THREE.DoubleSide,
+                    flatShading: false,
+                    alphaTest: 0.001,
+                    depthWrite: true,
+                    emissive: materialColor.clone().multiplyScalar(0.08),
+                    emissiveIntensity: 0.0,
+                    envMapIntensity: 0.0
+                });
 
                 // Enable shadows
                 node.castShadow = true;
@@ -276,49 +283,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getMaterialColor(nodeName) {
         const colorMap = {
-            'label_1': new THREE.Color(0xCC1A1A),
-            'label_2': new THREE.Color(0x2255CC),
-            'label_3': new THREE.Color(0xE8A0A0),
-            'label_4': new THREE.Color(0xDBA898),
-            'label_5': new THREE.Color(0xE8C878),
-            'label_6': new THREE.Color(0x38B84D),
+            'label_1': new THREE.Color(0xCB0404), // Artery - Crimson Red
+            'label_2': new THREE.Color(0x0065F8), // Vein - Blue
+            'label_3': new THREE.Color(0xF14C4C), // Stomach - Pink
+            'label_4': new THREE.Color(0xff29ca3), // Colon - Beige
+            'label_5': new THREE.Color(0xFFB22C), // Pancreas - Yellow
+            'label_6': new THREE.Color(0x38E54D)  // Tumor - Green
         };
         return colorMap[nodeName] || new THREE.Color(0.8, 0.8, 0.8);
-    }
-
-    // Per-organ physically-based material properties
-    const ORGAN_PROPS = {
-        // Arteries: glossy wet vessel, deep red, strong clearcoat
-        'label_1': { color: 0xCC1A1A, roughness: 0.25, clearcoat: 0.9, clearcoatRoughness: 0.1, emissive: 0x330808, emissiveI: 0.25 },
-        // Veins: glossy dark blue vessel
-        'label_2': { color: 0x2255CC, roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.15, emissive: 0x081030, emissiveI: 0.2 },
-        // Stomach: soft pink tissue, moist mucosa
-        'label_3': { color: 0xE8A0A0, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.35, emissive: 0x200808, emissiveI: 0.15 },
-        // Colon: pinkish-tan, matte serosa
-        'label_4': { color: 0xDBA898, roughness: 0.65, clearcoat: 0.15, clearcoatRoughness: 0.5, emissive: 0x150A08, emissiveI: 0.1 },
-        // Pancreas: pale yellow, soft lobulated
-        'label_5': { color: 0xE8C878, roughness: 0.55, clearcoat: 0.25, clearcoatRoughness: 0.4, emissive: 0x1A1508, emissiveI: 0.15 },
-        // Tumor: distinct green marker
-        'label_6': { color: 0x38B84D, roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.25, emissive: 0x082010, emissiveI: 0.2 },
-    };
-
-    function createOrganMaterial(nodeName) {
-        const p = ORGAN_PROPS[nodeName] || { color: 0xCCCCCC, roughness: 0.5, clearcoat: 0, clearcoatRoughness: 0.5, emissive: 0x000000, emissiveI: 0 };
-        return new THREE.MeshPhysicalMaterial({
-            color: p.color,
-            roughness: p.roughness,
-            metalness: 0.0,
-            clearcoat: p.clearcoat,
-            clearcoatRoughness: p.clearcoatRoughness,
-            emissive: new THREE.Color(p.emissive),
-            emissiveIntensity: p.emissiveI,
-            transparent: true,
-            opacity: 1.0,
-            side: THREE.DoubleSide,
-            flatShading: false,
-            depthWrite: true,
-            envMapIntensity: 0.3,
-        });
     }
 
     function centerAndScaleModel(model) {
