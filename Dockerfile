@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p app/static/uploads app/static/models
+RUN mkdir -p app/static/uploads app/static/models app/data
 
 # Expose port 8080 (Cloud Run default)
 EXPOSE 8080

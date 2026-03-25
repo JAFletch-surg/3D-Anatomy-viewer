@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}CME3D - Case Library{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Case Library</h1>
+            <p class="text-gray-600 mt-1 text-sm">Manage your surgical cases and 3D reconstructions</p>
+        </div>
+        <a href="{{ url_for('main.new_case') }}"
+           class="inline-flex items-center px-5 py-2.5 bg-neon-400 text-black text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-neon-400/30 transition-all hover:-translate-y-0.5">
+            <i class="fas fa-plus mr-2"></i>New Case
+        </a>
+    </div>
+
+    {% if cases %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {% for case in cases %}
+        <a href="{{ url_for('main.case_detail', case_id=case.id) }}"
+           class="group bg-surface-700 border border-white/5 rounded-2xl overflow-hidden hover:border-neon-400/20 hover:shadow-xl hover:shadow-neon-400/5 transition-all duration-300 hover:-translate-y-1">
+            <div class="p-5 pb-3">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-neon-400/10 rounded-xl flex items-center justify-center border border-neon-400/10 group-hover:bg-neon-400/15 transition-colors">
+                        <i class="fas fa-cube text-neon-400 text-sm"></i>
+                    </div>
+                    {% if case.status == 'complete' %}
+                    <span class="px-2.5 py-1 text-xs font-medium bg-neon-400/10 text-neon-400 rounded-full">Ready</span>
+                    {% elif case.status == 'processing' %}
+                    <span class="px-2.5 py-1 text-xs font-medium bg-yellow-500/15 text-yellow-400 rounded-full">
+                        <i class="fas fa-spinner fa-spin mr-1"></i>Processing
+                    </span>
+                    {% elif case.status == 'error' %}
+                    <span class="px-2.5 py-1 text-xs font-medium bg-red-500/15 text-red-400 rounded-full">Error</span>
+                    {% else %}
+                    <span class="px-2.5 py-1 text-xs font-medium bg-white/5 text-gray-500 rounded-full">Pending</span>
+                    {% endif %}
+                </div>
+                <h3 class="text-white font-semibold text-base group-hover:text-neon-400 transition-colors truncate">{{ case.title }}</h3>
+                {% if case.patient_id %}
+                <p class="text-gray-600 text-xs mt-1">ID: {{ case.patient_id }}</p>
+                {% endif %}
+            </div>
+            <div class="px-5 py-3 border-t border-white/5 flex items-center justify-between">
+                <span class="text-gray-700 text-xs">{{ case.created_at[:10] }}</span>
+                <div class="flex items-center space-x-3 text-gray-600">
+                    {% if case.glb_filename %}
+                    <i class="fas fa-cube text-xs text-neon-400/50" title="3D Model"></i>
+                    {% endif %}
+                    {% if case.video_filename %}
+                    <i class="fas fa-video text-xs text-neon-400/50" title="Video"></i>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-24">
+        <div class="w-20 h-20 bg-surface-700 rounded-2xl flex items-center justify-center mb-6 border border-white/5">
+            <i class="fas fa-folder-open text-3xl text-gray-700"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-white mb-2">No cases yet</h2>
+        <p class="text-gray-600 text-sm mb-8 max-w-sm text-center">Create your first case to upload segmentation data and operative videos</p>
+        <a href="{{ url_for('main.new_case') }}"
+           class="inline-flex items-center px-6 py-3 bg-neon-400 text-black text-sm font-bold rounded-xl hover:shadow-lg hover:shadow-neon-400/30 transition-all">
+            <i class="fas fa-plus mr-2"></i>Create First Case
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

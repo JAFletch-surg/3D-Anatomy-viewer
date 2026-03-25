@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}CME3D - New Case{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-8">
+        <a href="{{ url_for('main.index') }}" class="text-gray-600 hover:text-neon-400 text-sm transition-colors">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Cases
+        </a>
+        <h1 class="text-2xl font-bold text-white mt-4">New Case</h1>
+        <p class="text-gray-600 text-sm mt-1">Upload scan data and operative video for 3D reconstruction</p>
+    </div>
+
+    <form action="{{ url_for('main.new_case') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        <!-- Case Info -->
+        <div class="bg-surface-700 border border-white/5 rounded-2xl p-6 space-y-5">
+            <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
+                <i class="fas fa-info-circle mr-2 text-xs"></i>Case Information
+            </h2>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1.5">Case Title <span class="text-neon-400">*</span></label>
+                <input type="text" name="title" required placeholder="e.g. Pancreatic Mass - Whipple"
+                       class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-700 text-sm focus:outline-none focus:border-neon-400/50 focus:ring-1 focus:ring-neon-400/20 transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1.5">Patient ID</label>
+                <input type="text" name="patient_id" placeholder="Optional identifier"
+                       class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-700 text-sm focus:outline-none focus:border-neon-400/50 focus:ring-1 focus:ring-neon-400/20 transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1.5">Notes</label>
+                <textarea name="notes" rows="3" placeholder="Clinical notes, findings, operative plan..."
+                          class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-700 text-sm focus:outline-none focus:border-neon-400/50 focus:ring-1 focus:ring-neon-400/20 transition-all resize-none"></textarea>
+            </div>
+        </div>
+
+        <!-- Scan Upload -->
+        <div class="bg-surface-700 border border-white/5 rounded-2xl p-6 space-y-4">
+            <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
+                <i class="fas fa-brain mr-2 text-xs"></i>Segmentation Data
+            </h2>
+            <div id="scan-drop" class="relative border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
+                <input type="file" name="scan_file" id="scan-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".nii,.nii.gz">
+                <div id="scan-placeholder">
+                    <div class="w-12 h-12 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
+                        <i class="fas fa-cloud-upload-alt text-neon-400"></i>
+                    </div>
+                    <p class="text-gray-400 text-sm font-medium">Drop NIfTI file here or click to browse</p>
+                    <p class="text-gray-700 text-xs mt-1">.nii, .nii.gz files supported</p>
+                </div>
+                <div id="scan-selected" class="hidden">
+                    <div class="flex items-center justify-center space-x-3">
+                        <i class="fas fa-file-medical text-neon-400"></i>
+                        <span id="scan-filename" class="text-white text-sm font-medium"></span>
+                        <button type="button" onclick="clearScanFile()" class="text-gray-600 hover:text-red-400 transition-colors">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Upload -->
+        <div class="bg-surface-700 border border-white/5 rounded-2xl p-6 space-y-4">
+            <h2 class="text-neon-400 font-semibold text-sm uppercase tracking-wider flex items-center">
+                <i class="fas fa-video mr-2 text-xs"></i>Operative Video
+                <span class="text-gray-700 text-xs font-normal normal-case tracking-normal ml-2">(optional)</span>
+            </h2>
+            <div id="video-drop" class="relative border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-neon-400/30 transition-all cursor-pointer group">
+                <input type="file" name="video_file" id="video-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".mp4,.webm,.mov,.avi">
+                <div id="video-placeholder">
+                    <div class="w-12 h-12 bg-neon-400/10 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-neon-400/20 transition-colors border border-neon-400/10">
+                        <i class="fas fa-film text-neon-400"></i>
+                    </div>
+                    <p class="text-gray-400 text-sm font-medium">Drop video file here or click to browse</p>
+                    <p class="text-gray-700 text-xs mt-1">MP4, WebM, MOV, AVI supported</p>
+                </div>
+                <div id="video-selected" class="hidden">
+                    <div class="flex items-center justify-center space-x-3">
+                        <i class="fas fa-film text-neon-400"></i>
+                        <span id="video-filename" class="text-white text-sm font-medium"></span>
+                        <button type="button" onclick="clearVideoFile()" class="text-gray-600 hover:text-red-400 transition-colors">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit"
+                class="w-full py-3.5 bg-neon-400 text-black font-bold rounded-xl hover:shadow-lg hover:shadow-neon-400/30 transition-all text-sm">
+            <i class="fas fa-plus mr-2"></i>Create Case
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const scanInput = document.getElementById('scan-input');
+    const videoInput = document.getElementById('video-input');
+
+    scanInput.addEventListener('change', function() {
+        if (this.files[0]) {
+            document.getElementById('scan-placeholder').classList.add('hidden');
+            document.getElementById('scan-selected').classList.remove('hidden');
+            document.getElementById('scan-filename').textContent = this.files[0].name;
+        }
+    });
+
+    videoInput.addEventListener('change', function() {
+        if (this.files[0]) {
+            document.getElementById('video-placeholder').classList.add('hidden');
+            document.getElementById('video-selected').classList.remove('hidden');
+            document.getElementById('video-filename').textContent = this.files[0].name;
+        }
+    });
+
+    function clearScanFile() {
+        scanInput.value = '';
+        document.getElementById('scan-placeholder').classList.remove('hidden');
+        document.getElementById('scan-selected').classList.add('hidden');
+    }
+
+    function clearVideoFile() {
+        videoInput.value = '';
+        document.getElementById('video-placeholder').classList.remove('hidden');
+        document.getElementById('video-selected').classList.add('hidden');
+    }
+
+    ['scan-drop', 'video-drop'].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('border-neon-400/40', 'bg-neon-400/5'); });
+        el.addEventListener('dragleave', e => { e.preventDefault(); el.classList.remove('border-neon-400/40', 'bg-neon-400/5'); });
+        el.addEventListener('drop', () => el.classList.remove('border-neon-400/40', 'bg-neon-400/5'));
+    });
+</script>
+{% endblock %}
