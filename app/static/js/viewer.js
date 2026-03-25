@@ -282,8 +282,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Map node names to specific colors 
         const colorMap = {
             'label_1': new THREE.Color(0xCB0404), // Artery - Crimson Red
-            'label_2': new THREE.Color(0x0065F8), // Vein - Blue 
-            'label_3': new THREE.Color(0xF14C4C), // Duodenum - Pink
+            'label_2': new THREE.Color(0x0065F8), // Vein - Blue
+            'label_3': new THREE.Color(0xF14C4C), // Stomach - Pink
             'label_4': new THREE.Color(0xff29ca3), // Colon - Beige
             'label_5': new THREE.Color(0xFFB22C), // Pancreas - Yellow
             'label_6': new THREE.Color(0x38E54D)  // Tumor - Green
