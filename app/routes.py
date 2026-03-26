@@ -30,22 +30,12 @@ def get_storage_client():
     return storage.Client()
 
 
-def _get_signing_credentials():
-    """Get credentials that can sign URLs on Cloud Run.
-    Cloud Run compute credentials can't sign directly — we need to
-    use the IAM signBlob API via a service account email."""
-    import google.auth
-    from google.auth import compute_engine
-    credentials, project = google.auth.default()
-    # On Cloud Run, credentials are compute engine credentials
-    # which can't sign. Use IAM-based signing instead.
-    if hasattr(credentials, 'service_account_email'):
-        signing_credentials = compute_engine.IDTokenCredentials(
-            request=google.auth.transport.requests.Request(),
-            target_audience="",
-            service_account_email=credentials.service_account_email,
-        )
-        return credentials.service_account_email
+def _get_signing_client():
+    """Get a storage client that can sign URLs using a service account key."""
+    from google.cloud import storage
+    key_path = os.environ.get('GCS_SIGNING_KEY', '/secrets/gcs-key.json')
+    if os.path.exists(key_path):
+        return storage.Client.from_service_account_json(key_path)
     return None
 
 
@@ -87,18 +77,18 @@ def gcs_delete_blob(blob_path):
 
 
 def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minutes=60):
-    """Generate a v4 signed URL for a GCS blob.
-    On Cloud Run, compute credentials can't sign directly.
-    We use service_account_email + access_token for IAM-based signing."""
-    import google.auth
-    import google.auth.transport.requests
-
+    """Generate a v4 signed URL using a service account key file.
+    Cloud Run compute credentials can't sign — we use a dedicated
+    service account key mounted as a secret."""
     bucket_name = get_gcs_bucket()
-    client = get_storage_client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_path)
 
-    credentials, project = google.auth.default()
+    # Use the signing client (has a private key that can sign)
+    signing_client = _get_signing_client()
+    if not signing_client:
+        raise RuntimeError("No signing key available. Mount GCS_SIGNING_KEY or /secrets/gcs-key.json")
+
+    bucket = signing_client.bucket(bucket_name)
+    blob = bucket.blob(blob_path)
 
     kwargs = {
         'version': 'v4',
@@ -107,16 +97,6 @@ def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minute
     }
     if content_type and method == 'PUT':
         kwargs['content_type'] = content_type
-
-    # Cloud Run uses compute engine credentials which can't sign.
-    # Pass service_account_email + access_token to use IAM signBlob API.
-    sa_email = getattr(credentials, 'service_account_email', None)
-    if sa_email:
-        # Ensure we have a fresh token
-        auth_request = google.auth.transport.requests.Request()
-        credentials.refresh(auth_request)
-        kwargs['service_account_email'] = sa_email
-        kwargs['access_token'] = credentials.token
 
     return blob.generate_signed_url(**kwargs)
 
