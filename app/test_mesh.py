@@ -37,21 +37,32 @@ def extract_transformed_mesh(filepath):
         data = nii.get_fdata()
         original_affine = nii.affine
         
+        # Remap input segmentation labels to internal labels 1-6
+        # Input labels from segmentation file → internal labels used by viewer
+        LABEL_REMAP = {
+            5:   1,   # Artery
+            6:   2,   # Vein
+            10:  3,   # Stomach
+            50:  4,   # Colon
+            61:  5,   # Pancreas
+            111: 6,   # Tumor
+        }
+
         # Extract raw meshes using affine transformation
         raw_meshes = []
-        for label in range(1, 7):
-            if np.any(data == label):
-                logger.info(f"\nExtracting label_{label}")
-                vertices, faces, _, _ = marching_cubes(data == label)
-                
+        for input_label, internal_label in LABEL_REMAP.items():
+            if np.any(data == input_label):
+                logger.info(f"\nExtracting input label {input_label} → label_{internal_label}")
+                vertices, faces, _, _ = marching_cubes(data == input_label)
+
                 # Apply affine transformation to vertices (improved method)
                 homogeneous_vertices = np.hstack((vertices, np.ones((vertices.shape[0], 1))))
                 transformed_vertices = np.dot(homogeneous_vertices, original_affine.T)[:, :3]
-                
+
                 raw_meshes.append({
                     'vertices': transformed_vertices,
                     'faces': faces,
-                    'label': label
+                    'label': internal_label
                 })
         
         if not raw_meshes:
@@ -116,8 +127,11 @@ def extract_transformed_mesh(filepath):
                 
             if len(mesh.faces) > 1000:
                 logger.info(f"Decimating label_{label} from {len(mesh.faces)} to {target_faces} faces")
-                mesh = mesh.simplify_quadric_decimation(target_faces)
-                logger.info(f"Faces after decimation: {len(mesh.faces)}")
+                try:
+                    mesh = mesh.simplify_quadric_decimation(target_faces)
+                    logger.info(f"Faces after decimation: {len(mesh.faces)}")
+                except Exception as e:
+                    logger.warning(f"Quadric decimation failed for label_{label}: {e}, skipping decimation")
             
             # Apply smoothing
             iterations = 10 if label in [1, 2] else 20

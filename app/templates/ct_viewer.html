@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CME3D - CT Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { overflow: hidden; background: #000; font-family: 'Inter', system-ui, sans-serif; }
+        #gl { position: fixed; top: 44px; left: 0; width: 100vw; height: calc(100vh - 44px); }
+        .bar { background: rgba(0,0,0,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,240,212,0.08); }
+        .view-btn.on { background: rgba(0,240,212,0.15); color: #00f0d4; }
+        .sl::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:#00f0d4; cursor:pointer; border:2px solid #000; }
+        .sl { -webkit-appearance:none; height:3px; background:rgba(255,255,255,0.1); border-radius:2px; outline:none; width:100%; }
+        /* Single dropdown panel */
+        #ctrl { position:fixed; top:50px; right:8px; width:210px; max-height:calc(100vh - 56px); overflow-y:auto; z-index:40; }
+        #ctrl::-webkit-scrollbar { width:3px; }
+        #ctrl::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:2px; }
+        .section { border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .section:last-child { border-bottom: none; }
+        .section-head { cursor:pointer; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
+        .section-body { display:none; padding:0 12px 10px; }
+        .section-body.show { display:block; }
+        .seg-row { display:flex; align-items:center; justify-content:space-between; padding:4px 0; }
+        .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .pbtn { padding:4px 8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.05); border-radius:6px; color:#999; cursor:pointer; transition:all 0.15s; }
+        .pbtn.on { background:rgba(0,240,212,0.15); color:#00f0d4; border-color:rgba(0,240,212,0.2); }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <!-- Top bar -->
+    <div class="bar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 h-[44px]">
+        <a href="{% if case %}{{ url_for('main.case_detail', case_id=case.id) }}{% else %}javascript:history.back(){% endif %}" class="text-gray-500 hover:text-[#00f0d4] text-sm shrink-0"><i class="fas fa-arrow-left mr-1"></i><span class="hidden sm:inline">Case</span></a>
+
+        <!-- View toggle: navigate between viewers -->
+        {% if case %}
+        <div class="flex items-center bg-black/50 rounded-lg p-0.5 border border-white/5 shrink-0">
+            {% if case.glb_filename %}
+            <a href="{{ url_for('main.viewer', filename=case.glb_filename) }}" class="px-2.5 py-1 text-xs text-gray-500 hover:text-[#00f0d4] rounded-md transition-colors">
+                <i class="fas fa-cube mr-0.5"></i>3D
+            </a>
+            {% endif %}
+            <span class="px-2.5 py-1 text-xs font-medium text-[#00f0d4] bg-[#00f0d4]/15 rounded-md">
+                <i class="fas fa-x-ray mr-0.5"></i>CT
+            </span>
+            {% if case.video_filename %}
+            <a href="{{ url_for('main.case_detail', case_id=case.id) }}#video" class="px-2.5 py-1 text-xs text-gray-500 hover:text-[#00f0d4] rounded-md transition-colors">
+                <i class="fas fa-video mr-0.5"></i>Vid
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Slice view buttons -->
+        <div class="flex gap-0.5 shrink-0">
+            <button data-view="axial" id="v-axial" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Ax</button>
+            <button data-view="coronal" id="v-coronal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Cor</button>
+            <button data-view="sagittal" id="v-sagittal" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">Sag</button>
+            <button data-view="multi" id="v-multi" class="view-btn on px-2 py-1 text-xs rounded-md">Multi</button>
+            <button data-view="render" id="v-render" class="view-btn px-2 py-1 text-xs text-gray-500 rounded-md">3D</button>
+        </div>
+        <button id="toggle-ctrl" class="text-gray-500 hover:text-[#00f0d4] text-sm shrink-0"><i class="fas fa-sliders-h"></i></button>
+    </div>
+
+    <canvas id="gl"></canvas>
+
+    <!-- Single control panel -->
+    <div id="ctrl" class="fixed top-[50px] right-[8px] z-40 bg-black/80 backdrop-blur-xl rounded-xl border border-white/5" style="width:200px; max-height:calc(100vh - 58px); overflow-y:auto;"
+        <!-- Window -->
+        <div class="section">
+            <div class="section-head">
+                <span class="text-[#00f0d4] text-xs font-semibold uppercase tracking-wider"><i class="fas fa-adjust mr-1"></i>Window</span>
+                <i class="fas fa-chevron-right text-gray-700 text-xs tr"></i>
+            </div>
+            <div class="section-body">
+                <div class="grid grid-cols-3 gap-1 mb-2" id="presets">
+                    <button class="pbtn on" data-wp="abdomen">Abdomen</button>
+                    <button class="pbtn" data-wp="lung">Lung</button>
+                    <button class="pbtn" data-wp="bone">Bone</button>
+                    <button class="pbtn" data-wp="brain">Brain</button>
+                    <button class="pbtn" data-wp="liver">Liver</button>
+                    <button class="pbtn" data-wp="vascular">Vascular</button>
+                </div>
+                <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-7">WW</span><input type="range" class="sl flex-1" id="ww" min="1" max="4000" value="400"><span id="wwv" class="text-[#00f0d4] text-xs font-mono w-8 text-right">400</span></div>
+                <div class="flex items-center gap-2"><span class="text-gray-600 text-xs w-7">WL</span><input type="range" class="sl flex-1" id="wl" min="-1000" max="3000" value="40"><span id="wlv" class="text-[#00f0d4] text-xs font-mono w-8 text-right">40</span></div>
+            </div>
+        </div>
+        <!-- Segmentation -->
+        {% if seg_filename %}
+        <div class="section">
+            <div class="section-head">
+                <span class="text-[#00f0d4] text-xs font-semibold uppercase tracking-wider"><i class="fas fa-layer-group mr-1"></i>Labels</span>
+                <i class="fas fa-chevron-right text-gray-700 text-xs tr"></i>
+            </div>
+            <div class="section-body">
+                <div id="seg-rows">
+                    <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#DC143C"></div><span class="text-gray-300 text-xs">Artery</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="5"><button data-s="5" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
+                    <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#4169E1"></div><span class="text-gray-300 text-xs">Vein</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="6"><button data-s="6" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
+                    <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#FF1493"></div><span class="text-gray-300 text-xs">Stomach</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="10"><button data-s="10" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
+                    <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#CD853F"></div><span class="text-gray-300 text-xs">Colon</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="50"><button data-s="50" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
+                    <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#FFB347"></div><span class="text-gray-300 text-xs">Pancreas</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="61"><button data-s="61" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
+                    <div class="seg-row"><div class="flex items-center gap-2"><div class="dot" style="background:#32CD32"></div><span class="text-gray-300 text-xs">Tumor</span></div><div class="flex items-center gap-1"><input type="range" min="0" max="100" value="70" class="sl" style="width:40px" data-s="111"><button data-s="111" class="text-gray-500 text-xs seg-eye"><i class="fas fa-eye"></i></button></div></div>
+                </div>
+                <div class="flex gap-1 mt-2"><button id="seg-show-all" class="pbtn on flex-1">Show All</button><button id="seg-hide-all" class="pbtn flex-1">Hide All</button></div>
+            </div>
+        </div>
+        {% endif %}
+        <!-- 3D / Clip -->
+        <div class="section">
+            <div class="section-head">
+                <span class="text-[#00f0d4] text-xs font-semibold uppercase tracking-wider"><i class="fas fa-cut mr-1"></i>Clip</span>
+                <i class="fas fa-chevron-right text-gray-700 text-xs tr"></i>
+            </div>
+            <div class="section-body">
+                <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-6">Z</span><input type="range" class="sl flex-1" id="cz" min="0" max="100" value="100"><span id="czv" class="text-gray-500 text-xs w-7 text-right">Off</span></div>
+                <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-6">Y</span><input type="range" class="sl flex-1" id="cy" min="0" max="100" value="100"><span id="cyv" class="text-gray-500 text-xs w-7 text-right">Off</span></div>
+                <div class="flex items-center gap-2 mb-1"><span class="text-gray-600 text-xs w-6">X</span><input type="range" class="sl flex-1" id="cx" min="0" max="100" value="100"><span id="cxv" class="text-gray-500 text-xs w-7 text-right">Off</span></div>
+                <button id="reset-clip" class="pbtn w-full mt-1">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="ld" class="fixed inset-0 bg-black/90 flex items-center justify-center z-30">
+        <div class="text-center"><div class="w-8 h-8 border-2 border-[#00f0d4]/20 border-t-[#00f0d4] rounded-full mx-auto mb-4 spin"></div><div class="text-white text-sm">Loading CT...</div></div>
+    </div>
+
+    <script type="module">
+        import { Niivue } from "https://esm.sh/@niivue/niivue@0.44.1";
+
+        // Expose all functions globally immediately so onclick handlers work
+        // (module scripts are deferred but onclick bindings need global access)
+
+        const nv = new Niivue({ backColor:[0,0,0,1], crosshairColor:[0,0.94,0.83,0.5], show3Dcrosshair:false, multiplanarForceRender:true, isRadiologicalConvention:true, crosshairWidth:0 });
+        nv.attachToCanvas(document.getElementById("gl"));
+        window.nv = nv;
+
+        // Seg label colors matching the 3D model viewer exactly
+        // Format: label_value -> [R, G, B] (0-255)
+        const LC = { 5:[203,4,4], 6:[0,101,248], 10:[241,76,76], 50:[255,41,202], 61:[255,178,44], 111:[56,229,77] };
+        const segOn = { 5:true, 6:true, 10:true, 50:true, 61:true, 111:true };
+        const LABEL_NAMES = { 5:'Artery', 6:'Vein', 10:'Stomach', 50:'Colon', 61:'Pancreas', 111:'Tumor' };
+
+        const WP = { abdomen:[400,40], lung:[1500,-600], bone:[2000,500], brain:[80,40], liver:[150,70], vascular:[600,200] };
+
+        const ctUrl = "{{ ct_url or ('/static/uploads/' + ct_filename) }}";
+        const segUrl = "{{ seg_url or '' }}";
+
+        // Build seg colormap using NiiVue's sparse I (index) format:
+        // { R:[...], G:[...], B:[...], I:[...], labels:[...] }
+        // I maps voxel intensity values to array positions — sparse, efficient
+        function buildSegCmap() {
+            const R = [0], G = [0], B = [0], I = [0], labels = [""];
+            for (const [lbl, rgb] of Object.entries(LC)) {
+                I.push(parseInt(lbl));
+                if (segOn[lbl]) {
+                    R.push(rgb[0]); G.push(rgb[1]); B.push(rgb[2]);
+                } else {
+                    R.push(0); G.push(0); B.push(0);
+                }
+                labels.push(LABEL_NAMES[lbl] || "");
+            }
+            return { R, G, B, I, labels };
+        }
+
+        // Load CT first, then add seg overlay
+        const vols = [{ url: ctUrl, colormap: "gray" }];
+        if (segUrl) vols.push({ url: segUrl, opacity: 0.7, colorbarVisible: false });
+
+        nv.loadVolumes(vols).then(() => {
+            setWin(400, 40);
+            nv.setSliceType(nv.sliceTypeMultiplanar);
+
+            // Apply custom label colormap to segmentation
+            if (nv.volumes.length > 1) {
+                const seg = nv.volumes[1];
+                seg.setColormapLabel(buildSegCmap());
+                nv.updateGLVolume();
+            }
+            document.getElementById("ld").style.display = "none";
+        }).catch(e => {
+            document.getElementById("ld").innerHTML = '<div class="text-red-400 text-sm p-8">Failed to load: ' + (e.message||e) + '<br><button id="retry-btn" class="mt-3 px-4 py-2 bg-white/5 rounded text-white text-xs">Retry</button></div>';
+            document.getElementById("retry-btn")?.addEventListener('click', () => location.reload());
+        });
+
+        // Update seg overlay: rebuild colormap with current visibility
+        function updateSeg() {
+            if (nv.volumes.length < 2) return;
+            nv.volumes[1].setColormapLabel(buildSegCmap());
+            // Also update overall opacity from average of visible sliders
+            let total = 0, count = 0;
+            document.querySelectorAll('input[data-s]').forEach(sl => {
+                if (segOn[sl.dataset.s]) { total += parseInt(sl.value); count++; }
+            });
+            nv.volumes[1].opacity = count > 0 ? (total / count) / 100 : 0;
+            nv.updateGLVolume();
+        }
+
+        // Windowing — use NiiVue's setVolume API for reliable updates
+        function setWin(ww, wl) {
+            if (!nv.volumes.length) return;
+            const v = nv.volumes[0];
+            v.cal_min = wl - ww/2;
+            v.cal_max = wl + ww/2;
+            nv.refreshLayers(v, 0);
+            nv.updateGLVolume();
+            document.getElementById('ww').value = ww;
+            document.getElementById('wl').value = wl;
+            document.getElementById('wwv').textContent = ww;
+            document.getElementById('wlv').textContent = wl;
+        }
+        document.getElementById('ww').addEventListener('input', function(){ const w=+this.value; document.getElementById('wwv').textContent=w; setWin(w, +document.getElementById('wl').value); });
+        document.getElementById('wl').addEventListener('input', function(){ const l=+this.value; document.getElementById('wlv').textContent=l; setWin(+document.getElementById('ww').value, l); });
+
+        // View switcher — bind via JS
+        document.querySelectorAll('[data-view]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const v = this.dataset.view;
+                document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('on'));
+                this.classList.add('on');
+                const m = {axial:nv.sliceTypeAxial, coronal:nv.sliceTypeCoronal, sagittal:nv.sliceTypeSagittal, multi:nv.sliceTypeMultiplanar, render:nv.sliceTypeRender};
+                nv.setSliceType(m[v]??nv.sliceTypeMultiplanar);
+            });
+        });
+
+        // Toggle control panel
+        document.getElementById('toggle-ctrl')?.addEventListener('click', () => {
+            document.getElementById('ctrl').classList.toggle('hidden');
+        });
+
+        // Window presets — bind via JS
+        document.querySelectorAll('[data-wp]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const name = this.dataset.wp;
+                const p = WP[name]; if(!p) return;
+                setWin(p[0], p[1]);
+                document.querySelectorAll('[data-wp]').forEach(b=>b.classList.remove('on'));
+                this.classList.add('on');
+            });
+        });
+
+        // Section accordion — bind via JS
+        document.querySelectorAll('.section-head').forEach(head => {
+            head.addEventListener('click', function() {
+                const body = this.nextElementSibling;
+                const arrow = this.querySelector('.tr');
+                const wasOpen = body.classList.contains('show');
+                document.querySelectorAll('.section-body').forEach(b=>b.classList.remove('show'));
+                document.querySelectorAll('.tr').forEach(a=>a.style.transform='');
+                if (!wasOpen) { body.classList.add('show'); if(arrow) arrow.style.transform='rotate(90deg)'; }
+            });
+        });
+
+        // Seg show/hide all
+        function allSeg(show) {
+            Object.keys(LC).forEach(k => {
+                segOn[k] = !!show;
+                const btn = document.querySelector('.seg-eye[data-s="'+k+'"]');
+                if(btn) btn.innerHTML = show ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+                const sl = document.querySelector('input[data-s="'+k+'"]');
+                if (sl) sl.value = show ? 70 : 0;
+            });
+            updateSeg();
+        }
+        document.getElementById('seg-show-all')?.addEventListener('click', () => allSeg(1));
+        document.getElementById('seg-hide-all')?.addEventListener('click', () => allSeg(0));
+        document.querySelectorAll('.seg-eye').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const k = this.dataset.s;
+                segOn[k] = !segOn[k];
+                this.innerHTML = segOn[k] ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+                updateSeg();
+            });
+        });
+        document.querySelectorAll('input[data-s]').forEach(el => {
+            el.addEventListener('input', () => updateSeg());
+        });
+
+        // Clip planes
+        function clip(axis, pct) {
+            if (pct >= 100) { nv.setClipPlane([0,0,0,0]); return; }
+            const d = (pct/100)*2-1;
+            const p = {z:[0,0,1,d], y:[0,1,0,d], x:[1,0,0,d]};
+            nv.setClipPlane(p[axis]||[0,0,0,0]);
+        }
+        ['x','y','z'].forEach(a => {
+            const s = document.getElementById('c'+a);
+            if(!s) return;
+            s.oninput = function() {
+                const v = +this.value;
+                document.getElementById('c'+a+'v').textContent = v>=100?'Off':v+'%';
+                clip(a, v);
+                ['x','y','z'].filter(b=>b!==a).forEach(b=>{ document.getElementById('c'+b).value=100; document.getElementById('c'+b+'v').textContent='Off'; });
+            };
+        });
+        function resetClip() { nv.setClipPlane([0,0,0,0]); ['x','y','z'].forEach(a=>{document.getElementById('c'+a).value=100;document.getElementById('c'+a+'v').textContent='Off';}); }
+        document.getElementById('reset-clip')?.addEventListener('click', resetClip);
+
+        // Crosshair toggle via keyboard
+        document.addEventListener('keydown', e => { if(e.key==='c') { nv.opts.crosshairWidth = nv.opts.crosshairWidth ? 0 : 1; nv.updateGLVolume(); }});
+    </script>
+</body>
+</html>

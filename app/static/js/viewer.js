@@ -48,10 +48,11 @@ document.addEventListener('DOMContentLoaded', function() {
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.localClippingEnabled = true;
             
             
             renderer.outputEncoding = THREE.sRGBEncoding;
-            renderer.toneMapping = THREE.LinearToneMapping; 
+            renderer.toneMapping = THREE.LinearToneMapping;
             renderer.toneMappingExposure = 1.0; 
 
             // OrbitControls setup
@@ -93,15 +94,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupMedicalLighting() {
-        console.log('Setting up clean medical lighting...');
-        
-        // === PRIMARY KEY LIGHT ===
-        // Main light source - bright, from upper right
         const keyLight = new THREE.DirectionalLight(0xffffff, 0.7);
         keyLight.position.set(10, 12, 8);
         keyLight.castShadow = true;
-        
-        
         keyLight.shadow.mapSize.width = 4048;
         keyLight.shadow.mapSize.height = 4048;
         keyLight.shadow.camera.near = 0.5;
@@ -114,31 +109,21 @@ document.addEventListener('DOMContentLoaded', function() {
         keyLight.shadow.normalBias = 0.02;
         scene.add(keyLight);
 
-        // === FILL LIGHT ===
-        // Softer light from opposite side to reduce harsh shadows
         const fillLight = new THREE.DirectionalLight(0xe8f4fd, 0.4);
         fillLight.position.set(-8, 6, 5);
         scene.add(fillLight);
 
-        // === RIM/EDGE LIGHT ===
-        // Creates definition and separation from background
         const rimLight = new THREE.DirectionalLight(0xfff8f0, 0.7);
         rimLight.position.set(2, 8, -12);
         scene.add(rimLight);
 
-        // === BOTTOM FILL LIGHT ===
-        // Prevents dark undersides, important for medical visualization
         const bottomLight = new THREE.DirectionalLight(0xf0f8ff, 0.03);
         bottomLight.position.set(0, -8, 3);
         scene.add(bottomLight);
 
-        // === AMBIENT LIGHT ===
-        // Overall base illumination for even lighting
         const ambientLight = new THREE.AmbientLight(0xf5f8ff, 0.3);
         scene.add(ambientLight);
 
-        // === SUPPLEMENTAL SIDE LIGHTS ===
-        // Additional lighting for complete coverage
         const sideLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
         sideLight1.position.set(15, 0, 0);
         scene.add(sideLight1);
@@ -146,8 +131,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const sideLight2 = new THREE.DirectionalLight(0xffffff, 0.2);
         sideLight2.position.set(-15, 0, 0);
         scene.add(sideLight2);
-
-        console.log('Medical lighting setup complete - 7 lights configured');
     }
 
     function loadModel() {
@@ -172,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         loader.load(
-            `/static/uploads/${modelFilename}`,
+            (typeof modelUrl !== 'undefined' && modelUrl) ? modelUrl : `/static/uploads/${modelFilename}`,
             function(gltf) {
                 try {
                     handleModelLoaded(gltf);
@@ -231,20 +214,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const materialColor = getMaterialColor(node.name);
                 node.material = new THREE.MeshStandardMaterial({
                     color: materialColor,
-                    roughness: 0.2,        
-                    metalness: 0.0,         
-                    transparent: true,      
+                    roughness: 0.2,
+                    metalness: 0.0,
+                    transparent: true,
                     opacity: 1.0,
                     side: THREE.DoubleSide,
                     flatShading: false,
-                    alphaTest: 0.001,       
-                    depthWrite: true,      
-                    
-                    
+                    alphaTest: 0.001,
+                    depthWrite: true,
                     emissive: materialColor.clone().multiplyScalar(0.08),
                     emissiveIntensity: 0.0,
-                    
-                    // No environment reflections 
                     envMapIntensity: 0.0
                 });
 
@@ -276,20 +255,42 @@ document.addEventListener('DOMContentLoaded', function() {
         resetCameraView();
 
         console.log(`Model loaded: ${totalVertices} vertices, ${Math.round(totalPolygons)} polygons`);
+
+        // Auto-capture thumbnail after a short delay for the camera to settle
+        setTimeout(() => autoCaptureThumbnail(), 1500);
+    }
+
+    function autoCaptureThumbnail() {
+        // Only capture if we have a caseId in the URL query or data attribute
+        const caseId = window.caseIdForThumbnail;
+        if (!caseId || !renderer) return;
+
+        try {
+            renderer.render(scene, camera);
+            renderer.domElement.toBlob(function(blob) {
+                if (!blob) return;
+                const formData = new FormData();
+                formData.append('thumbnail', blob, 'thumb.png');
+                fetch('/cases/' + caseId + '/save-thumbnail', { method: 'POST', body: formData })
+                    .then(r => r.json())
+                    .then(d => { if (d.success) console.log('Thumbnail saved'); })
+                    .catch(() => {}); // Silent fail
+            }, 'image/png');
+        } catch (e) {
+            console.warn('Thumbnail capture failed:', e);
+        }
     }
 
     function getMaterialColor(nodeName) {
-        // Map node names to specific colors 
         const colorMap = {
             'label_1': new THREE.Color(0xCB0404), // Artery - Crimson Red
-            'label_2': new THREE.Color(0x0065F8), // Vein - Blue 
-            'label_3': new THREE.Color(0xF14C4C), // Duodenum - Pink
+            'label_2': new THREE.Color(0x0065F8), // Vein - Blue
+            'label_3': new THREE.Color(0xF14C4C), // Stomach - Pink
             'label_4': new THREE.Color(0xff29ca3), // Colon - Beige
             'label_5': new THREE.Color(0xFFB22C), // Pancreas - Yellow
             'label_6': new THREE.Color(0x38E54D)  // Tumor - Green
         };
-
-        return colorMap[nodeName] || new THREE.Color(0.8, 0.8, 0.8); // Default light gray
+        return colorMap[nodeName] || new THREE.Color(0.8, 0.8, 0.8);
     }
 
     function centerAndScaleModel(model) {
@@ -884,6 +885,72 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('3D viewer resources cleaned up');
     });
 
+    // ===== CLIPPING PLANES =====
+
+    const clipPlanes = {
+        x: new THREE.Plane(new THREE.Vector3(-1, 0, 0), 100),
+        y: new THREE.Plane(new THREE.Vector3(0, -1, 0), 100),
+        z: new THREE.Plane(new THREE.Vector3(0, 0, -1), 100),
+    };
+
+    const activeClipPlanes = [];
+
+    function setClipPlane(axis, value) {
+        // value: -100 to 100, where 100 = no clip, -100 = fully clipped
+        const plane = clipPlanes[axis];
+        if (!plane) return;
+
+        if (value >= 100) {
+            // Remove this clip plane
+            const idx = activeClipPlanes.indexOf(plane);
+            if (idx >= 0) activeClipPlanes.splice(idx, 1);
+        } else {
+            // Set the clip position: map -100..100 to actual scene units
+            const clipPos = (value / 100) * 1.5; // 1.5 = scene extent
+            plane.constant = clipPos;
+
+            // Add if not already active
+            if (!activeClipPlanes.includes(plane)) {
+                activeClipPlanes.push(plane);
+            }
+        }
+
+        // Apply clip planes to all mesh materials
+        Object.values(modelNodes).forEach(node => {
+            if (node.material) {
+                node.material.clippingPlanes = activeClipPlanes.length > 0 ? activeClipPlanes : [];
+                node.material.clipShadows = true;
+                node.material.needsUpdate = true;
+            }
+        });
+    }
+
+    function resetClips() {
+        activeClipPlanes.length = 0;
+        Object.values(modelNodes).forEach(node => {
+            if (node.material) {
+                node.material.clippingPlanes = [];
+                node.material.needsUpdate = true;
+            }
+        });
+    }
+
+    // Bind clip sliders from the HTML
+    function setupClipSliders() {
+        ['x', 'y', 'z'].forEach(axis => {
+            const slider = document.getElementById('clip3d-' + axis);
+            const label = document.getElementById('clip3d-' + axis + '-val');
+            if (slider) {
+                slider.addEventListener('input', function() {
+                    const val = parseInt(this.value);
+                    label.textContent = val >= 100 ? 'Off' : val + '%';
+                    setClipPlane(axis, val);
+                });
+            }
+        });
+    }
+    setupClipSliders();
+
     // Export some functions for external access
     window.viewer3D = {
         resetCamera: resetCameraView,
@@ -892,7 +959,9 @@ document.addEventListener('DOMContentLoaded', function() {
         showAllParts: showAllParts,
         hideAllParts: hideAllParts,
         getStats: () => renderStats,
-        setPartOpacity: setPartOpacity
+        setPartOpacity: setPartOpacity,
+        setClipPlane: setClipPlane,
+        resetClips: resetClips
     };
 
     console.log('Medical 3D Viewer script loaded successfully');

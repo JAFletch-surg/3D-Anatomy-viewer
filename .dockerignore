@@ -12,4 +12,5 @@ README.md
 .DS_Store
 node_modules
 app/static/uploads/*
+app/data/*
 *.log
