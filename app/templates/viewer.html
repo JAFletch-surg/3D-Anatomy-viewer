@@ -242,6 +242,7 @@
 
     <script>
         const modelFilename = "{{ model_filename }}";
+        const modelUrl = "{{ model_url or '' }}";
         window.caseIdForThumbnail = "{{ case_id or '' }}";
     </script>
     <script src="{{ url_for('static', filename='js/viewer.js') }}"></script>

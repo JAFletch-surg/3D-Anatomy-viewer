@@ -148,8 +148,8 @@
 
         const WP = { abdomen:[400,40], lung:[1500,-600], bone:[2000,500], brain:[80,40], liver:[150,70], vascular:[600,200] };
 
-        const ctUrl = "/static/uploads/{{ ct_filename }}";
-        const segUrl = "{{ seg_filename }}";
+        const ctUrl = "{{ ct_url or ('/static/uploads/' + ct_filename) }}";
+        const segUrl = "{{ seg_url or '' }}";
 
         // Build seg colormap using NiiVue's sparse I (index) format:
         // { R:[...], G:[...], B:[...], I:[...], labels:[...] }
@@ -170,7 +170,7 @@
 
         // Load CT first, then add seg overlay
         const vols = [{ url: ctUrl, colormap: "gray" }];
-        if (segUrl) vols.push({ url: "/static/uploads/" + segUrl, opacity: 0.7, colorbarVisible: false });
+        if (segUrl) vols.push({ url: segUrl, opacity: 0.7, colorbarVisible: false });
 
         nv.loadVolumes(vols).then(() => {
             setWin(400, 40);

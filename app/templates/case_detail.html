@@ -62,7 +62,7 @@
             <div class="p-4">
                 {% if case.thumbnail %}
                 <a href="{{ url_for('main.viewer', filename=case.glb_filename) }}" class="block rounded-xl overflow-hidden mb-3 group">
-                    <img src="{{ url_for('main.serve_uploaded_file', filename=case.thumbnail) }}" alt="3D Preview" class="w-full h-40 object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300">
+                    <img src="{{ file_urls.get('thumbnail', url_for('main.serve_uploaded_file', filename=case.thumbnail)) }}" alt="3D Preview" class="w-full h-40 object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300">
                 </a>
                 {% else %}
                 <div class="bg-black rounded-xl p-8 text-center border border-white/5 mb-3">
@@ -159,7 +159,7 @@
                 <!-- Thumbnail preview that opens the full player -->
                 <div id="video-thumb" class="relative bg-black rounded-xl border border-white/5 cursor-pointer group overflow-hidden" style="height: 180px;" onclick="document.getElementById('video-full').classList.remove('hidden'); document.getElementById('video-player').play();">
                     <video class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" preload="metadata" muted>
-                        <source src="{{ url_for('main.serve_uploaded_file', filename=case.video_filename) }}">
+                        <source src="{{ file_urls.get('video_filename', url_for('main.serve_uploaded_file', filename=case.video_filename)) }}">
                     </video>
                     <div class="absolute inset-0 flex items-center justify-center">
                         <div class="w-14 h-14 bg-neon-400/20 rounded-full flex items-center justify-center group-hover:bg-neon-400/30 group-hover:scale-110 transition-all">
@@ -196,7 +196,7 @@
                 </button>
             </div>
             <video id="video-player" controls controlslist="nodownload" class="w-full rounded-xl bg-black" style="max-height: 80vh;">
-                <source src="{{ url_for('main.serve_uploaded_file', filename=case.video_filename) }}">
+                <source src="{{ file_urls.get('video_filename', url_for('main.serve_uploaded_file', filename=case.video_filename)) }}">
             </video>
         </div>
     </div>

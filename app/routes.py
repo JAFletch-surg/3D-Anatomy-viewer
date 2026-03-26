@@ -102,11 +102,15 @@ def gcs_signed_url(blob_path, method="GET", content_type=None, expiration_minute
 
 
 def get_file_url(filename):
-    """Return a URL for serving a file. Always use our own route which
-    handles both local and GCS transparently."""
-    if filename:
-        return f"/static/uploads/{filename}"
-    return ""
+    """Return a URL for serving a file.
+    Uses signed GCS download URL if signing key is available (bypasses 32MB response limit).
+    Falls back to local Flask route."""
+    if filename and get_gcs_bucket() and _get_signing_client():
+        try:
+            return gcs_signed_url(f"uploads/{filename}", method="GET", expiration_minutes=120)
+        except Exception as e:
+            logger.warning(f"Signed download URL failed for {filename}: {e}")
+    return f"/static/uploads/{filename}"
 
 
 # --- Auth helpers ---
@@ -320,7 +324,13 @@ def case_detail(case_id):
     case = db.get_case(case_id)
     if not case:
         return redirect(url_for('main.index'))
-    response = make_response(render_template('case_detail.html', case=case, gcs_enabled=bool(get_gcs_bucket())))
+    # Build file URLs (signed GCS URLs if available, else local)
+    file_urls = {}
+    for key in ['glb_filename', 'ct_filename', 'nifti_filename', 'video_filename', 'thumbnail']:
+        fname = case.get(key)
+        if fname:
+            file_urls[key] = get_file_url(fname)
+    response = make_response(render_template('case_detail.html', case=case, file_urls=file_urls, gcs_enabled=bool(get_gcs_bucket())))
     return ensure_user_id(response)
 
 
@@ -467,7 +477,8 @@ def viewer(filename):
     if filename.startswith('case_'):
         case_id = filename.replace('case_', '').split('_')[0]
         case = db.get_case(case_id)
-    return render_template('viewer.html', model_filename=filename, case_id=case_id, case=case)
+    model_url = get_file_url(filename)
+    return render_template('viewer.html', model_filename=filename, case_id=case_id, case=case, model_url=model_url)
 
 
 @main.route('/ct-viewer/<filename>')
@@ -479,7 +490,9 @@ def ct_viewer(filename):
         case = db.get_case(case_id)
         if case and case.get('nifti_filename'):
             seg_filename = case['nifti_filename']
-    return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename, case=case)
+    ct_url = get_file_url(filename)
+    seg_url = get_file_url(seg_filename) if seg_filename else ''
+    return render_template('ct_viewer.html', ct_filename=filename, seg_filename=seg_filename, case=case, ct_url=ct_url, seg_url=seg_url)
 
 
 @main.route('/split/<case_id>')

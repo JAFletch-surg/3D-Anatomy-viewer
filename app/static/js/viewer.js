@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         loader.load(
-            `/static/uploads/${modelFilename}`,
+            (typeof modelUrl !== 'undefined' && modelUrl) ? modelUrl : `/static/uploads/${modelFilename}`,
             function(gltf) {
                 try {
                     handleModelLoaded(gltf);
